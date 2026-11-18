@@ -1,0 +1,14 @@
+{
+  "name": "mashrabiya",
+  "version": "0.1.0",
+  "description": "A Home Assistant dashboard card for a two-way-mirror smart display: drawn only in light on black, lock-only, sized in millimetres.",
+  "private": false,
+  "license": "MIT",
+  "type": "commonjs",
+  "files": ["dist/"],
+  "keywords": ["home-assistant", "hacs", "lovelace", "custom-card", "smart-mirror", "magic-mirror", "kiosk"],
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  }
+}
