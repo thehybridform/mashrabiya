@@ -106,9 +106,11 @@ test("hacs.json names the card file that ships in dist/", () => {
   assert.ok(fs.existsSync(path.join(ROOT, "dist", hacs.filename)));
 });
 
-test("the changelog's newest entry is the package version", () => {
+test("the changelog's newest release is the package version (an Unreleased section may sit above it)", () => {
   const version = JSON.parse(read("package.json")).version;
-  const first = read("CHANGELOG.md").match(/^## \[([^\]]+)\]/m);
+  const headings = [...read("CHANGELOG.md").matchAll(/^## \[([^\]]+)\]/gm)].map((m) => m[1]);
+  assert.ok(!headings.slice(1).includes("Unreleased"), "Unreleased must be the first section, if present");
+  const first = headings.find((h) => h !== "Unreleased");
   assert.ok(first, "CHANGELOG.md has no release heading");
-  assert.equal(first[1], version);
+  assert.equal(first, version);
 });

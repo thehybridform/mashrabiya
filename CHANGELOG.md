@@ -4,6 +4,29 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- `more_button` option (default `true`). `false` removes Main's More button; the remaining buttons
+  share the row evenly (wider, never smaller), and the status overflow reads "N more" instead of
+  "N more: tap More". Page 2 stays reachable by swiping and the navigation row.
+
+### Changed
+
+- More page redrawn as instruments: one row of large padlocks (door names drop a trailing "Lock" or
+  "Door"), one row of scene glyphs with Off moved into the section heading, the thermostat as the
+  room pages' arc gauge with − and + either side and the target under the dial, Now playing with the
+  media equaliser and a larger title, and a larger House line. Sections size to their content and
+  stack 15 mm apart; rows beyond four padlocks or five scenes (three above `text_scale` 1.25) split
+  into the fewest even rows. The instruments get the room pages' entrance.
+- README screenshots re-taken from the demo house.
+
+### Fixed
+
+- The news ticker's feed divider rule (`.sec`) is scoped to the ticker. Unscoped, it also matched a
+  door's state word on More ("Unlocked"), laying it out 2 px wide behind a stray bar.
+
 ## [0.1.1] - 2026-11-17
 
 ### Added

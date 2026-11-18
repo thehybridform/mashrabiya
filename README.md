@@ -22,11 +22,13 @@ anything filled glows through the glass as a rectangle.
 - **Main glance page.** Clock, date, weather with a small animated glyph, a rain warning when the
   hourly forecast expects precipitation, one status line that says in words whether you need to act
   ("Front Door unlocked", "Garage open", "Internet down", or "All clear"), and a row of big buttons
-  (Leaving, Lock all, Lights off, More). The middle of the glass is left empty and still: that is
-  where your face is reflected.
-- **More page.** Per-lock buttons with a live padlock and door state, scenes, a thermostat with
-  target and mode, what is playing on your media players, and a house summary ("Someone home" or
-  "Away", indoor air, internet).
+  (Leaving, Lock all, Lights off, More; `more_button: false` drops More and the others share the row).
+  The middle of the glass is left empty and still: that is where your face is reflected.
+- **More page.** The home controls drawn as instruments: one row of large padlocks with each door's
+  state (a tap only locks), one row of scene glyphs with Off in the section heading, the thermostat
+  as the room pages' arc gauge with − and + either side, Now playing with the media equaliser, and a
+  house summary ("Someone home" or "Away", indoor air, internet). Rows that would not fit split
+  evenly, never leaving one button alone.
 - **Radar page.** A live scope for each mmWave presence radar it finds (LD2450-style target x/y
   sensors): range rings, the configured detection zone, each target with a fading trail and its speed.
 - **A page per room.** Built from your Home Assistant areas: arc gauges for temperature (or the
@@ -107,8 +109,8 @@ the reflection and only the light shows; a photo of a mounted build is still to 
 |---|---|
 | ![Main page at 10:24 AM: the clock, the date, partly cloudy and 14 degrees at the top, an empty middle where the face reflects, the status line "All clear" in green above the Leaving, Lock all ("All locked"), Lights off ("6 on") and More buttons, and a headline along the bottom edge.](docs/img/main-calm.png) | ![Main page with two red status lines, "Back Door unlocked" and "Garage Door open", and Lock all saying "1 unlocked" with its padlock open.](docs/img/main-exceptions.png) |
 | **Main**, all clear | **Main** with an unlocked lock and an open door |
-| ![The More page: the three doors with green padlocks, all locked; the living room scenes Bright, Relax, Evening and Off; the thermostat at 21 degrees inside, target 21, heating; the speaker under Now playing with a Pause button; and a House line saying Someone home, Air Good, Internet OK.](docs/img/more.png) | ![The Living Room page: arc gauges for 21 degrees Celsius and 46 percent humidity, the air meter at Good, Occupied, four lights with bars in their own colours (Ceiling 50 percent, Floor Lamp 75 percent, Reading Lamp off, Shelf 40 percent), and the track playing on the speaker.](docs/img/room.png) |
-| **More**: doors, scenes, thermostat | **A room**: gauges, air meter, lights |
+| ![The More page: one row of three large green padlocks, Front, Back and Garage, all locked; the Living room scenes Bright, Relax and Evening as glyphs, with Off in the heading; the thermostat as an arc gauge at 21 degrees inside with minus and plus either side, target 21 and Heat selected; the speaker under Now playing with an equaliser and a Pause button; and a House line saying Someone home, Air Good, Internet OK.](docs/img/more.png) | ![The Living Room page: arc gauges for 21 degrees Celsius and 46 percent humidity, the air meter at Good, Occupied, four lights with bars in their own colours (Ceiling 50 percent, Floor Lamp 75 percent, Reading Lamp off, Shelf 40 percent), and the track playing on the speaker.](docs/img/room.png) |
+| **More**: padlocks, scenes, the thermostat dial | **A room**: gauges, air meter, lights |
 | ![The Radar page: the hallway sensor's 120 degree field with range rings every metre, a dashed detection zone, the scan line sweeping, and one target walking at about a metre per second, its speed beside it and a short fading trail behind it.](docs/img/radar.png) | ![Night view: only the clock, 11:12 PM, in dim amber, and one status line, "Back Door unlocked", in dimmed red; everything else is dark.](docs/img/night.png) |
 | **Radar**, one person walking | **Night**: the clock and exceptions only |
 | ![A drag in progress on Main: the page follows the finger to the left with the More page coming in from the right, a faint reticle where the finger went down and a short trail of coloured dots behind it.](docs/img/touch.png) | |
