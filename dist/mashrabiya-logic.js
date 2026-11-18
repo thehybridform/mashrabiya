@@ -1186,7 +1186,32 @@
   // --- touch feedback ---------------------------------------------------------------------------
   // A ring where a tap lands, a short fading trail behind a dragging finger, a chevron burst on a
   // recognised swipe. The card draws them from a fixed pool of trailMax dots (no per-move nodes).
-  const TOUCH = { rippleMs: 450, trailMs: 280, trailMax: 8, trailMinPx: 12, burstMs: 420, reducedDotMs: 140 };
+  // staleMs: a pointer still down with no event for this long is a STUCK GHOST (something blocking the IR
+  // frame's beams reports a touch that never ends), not a finger. 1500 ms: a deliberate two-finger touch
+  // lands its fingers within a few hundred ms of each other, and a resting finger seldom stays dead still
+  // (to the pixel) that long while a second one arrives. The card has no gesture that needs one finger
+  // held still while another taps (three times Chromium's 500 ms long-press), and a ghost costs at most
+  // a second and a half of dead glass after it appears. If a finger does rest that long, the second touch
+  // reads as an ordinary single tap: never more than one real touch could already do.
+  const TOUCH = { rippleMs: 450, trailMs: 280, trailMax: 8, trailMinPx: 12, burstMs: 420, reducedDotMs: 140, staleMs: 1500 };
+
+  // Whether a pointerdown should be read as the one finger on the glass. `isPrimary` is the event's flag;
+  // `others` the last-event timestamps of every OTHER pointer the card still has down. A primary pointer
+  // (or an event without the flag) is primary. A non-primary one counts as primary when every other pointer
+  // has been silent for at least staleMs: then the browser is only calling it secondary because of a stuck
+  // ghost. One live other pointer keeps it multi-touch. An unreadable timestamp is no evidence of a finger.
+  function treatAsPrimary(isPrimary, others, now, staleMs) {
+    if (isPrimary !== false) return true;
+    return (Array.isArray(others) ? others : []).every((t) => !(finite(t) && now - t < staleMs));
+  }
+
+  // The ids in a Map of pointer id -> last-event timestamp that have been silent for at least staleMs.
+  function staleIds(pointers, now, staleMs) {
+    if (!(pointers instanceof Map)) return [];
+    const out = [];
+    for (const [id, t] of pointers) if (!(finite(t) && now - t < staleMs)) out.push(id);
+    return out;
+  }
 
   // New trail with `pt` ({x, y, t}) added: points older than trailMs dropped, moves shorter than
   // trailMinPx skipped (decimation), at most trailMax kept.
@@ -1732,7 +1757,7 @@
     fpsEnabled, fpsStats, fpsTrim,
     RADAR, RADAR_KEY, toMm, radarPrefixes, radarList, radarModel, radarSpeedText, radarBox, radarProject,
     radarWedgePath, radarRingArc, radarRings, radarZoneRect, radarTrailPush,
-    TOUCH, trailPush, trailFrame, burstAngle,
+    TOUCH, trailPush, trailFrame, burstAngle, treatAsPrimary, staleIds,
     CONNECTION, connectionDown, connectionLost, statusLines,
     privacyActive, navTargets, gridColumns, rowSplit, rowColumns, moreRows, moreColumns, doorLabel, TWO_COLUMN_MAX_SCALE, MEDIA_MAX, mediaVisible, roomChips, scrollCue, scopeSize, roomKey, pageKeys, orderPages,
 

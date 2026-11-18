@@ -242,6 +242,12 @@ it.
 > lights and changed the thermostat. Until it is mounted, disable touch (below), or do all handling
 > with the display showing something harmless, such as a test page.
 
+**Stuck touches.** Anything resting against the frame's border (a cloth, a bottle, a sleeve) can
+block beams and report a touch that never lifts. The card tolerates this: a touch that has sent nothing
+for 1.5 s is treated as stuck, and the next real touch works as normal (see *Stuck pointers* in
+[DESIGN.md](DESIGN.md)). If touches seem dead for longer than that, look for something on the frame's
+border, or watch `sudo evtest` for a contact that never reports a release.
+
 ### 7a. Find the device
 
 ```sh
