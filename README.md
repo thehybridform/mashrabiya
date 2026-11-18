@@ -98,21 +98,26 @@ rules are in [docs/DESIGN.md](docs/DESIGN.md).
 
 ## Screenshots
 
-TODO: screenshots are not committed yet. When capturing them (see
-[docs/KIOSK.md](docs/KIOSK.md#screenshots-with-grim)), use these file names so this page and the
-release notes can link to them:
+Taken in a browser from the [demo house](demo/README.md), a made-up home with a fake Home Assistant, at
+the reference glass's 1440 x 2560 CSS pixels and saved at half size (720 x 1280). On a real mirror the black is
+the reflection and only the light shows; a photo of a mounted build is still to come.
 
-| File | What to capture |
+| | |
 |---|---|
-| `docs/img/main-calm.png` | Main page, everything locked, "All clear" |
-| `docs/img/main-exceptions.png` | Main page with two status lines (an unlocked lock, an open door) |
-| `docs/img/more.png` | The More page with doors, scenes, thermostat |
-| `docs/img/room.png` | A room page with both gauges, the air meter and a few lights |
-| `docs/img/radar.png` | The Radar page with one target moving (trail visible) |
-| `docs/img/night.png` | The night view (amber, clock and status only) |
-| `docs/img/ticker.png` | The bottom edge with headlines |
-| `docs/img/touch.png` | A drag in progress: reticle and trail |
-| `docs/img/mounted.jpg` | A photo of a mounted mirror, lit and unlit |
+| ![Main page at 10:24 AM: the clock, the date, partly cloudy and 14 degrees at the top, an empty middle where the face reflects, the status line "All clear" in green above the Leaving, Lock all ("All locked"), Lights off ("6 on") and More buttons, and a headline along the bottom edge.](docs/img/main-calm.png) | ![Main page with two red status lines, "Back Door unlocked" and "Garage Door open", and Lock all saying "1 unlocked" with its padlock open.](docs/img/main-exceptions.png) |
+| **Main**, all clear | **Main** with an unlocked lock and an open door |
+| ![The More page: the three doors with green padlocks, all locked; the living room scenes Bright, Relax, Evening and Off; the thermostat at 21 degrees inside, target 21, heating; the speaker under Now playing with a Pause button; and a House line saying Someone home, Air Good, Internet OK.](docs/img/more.png) | ![The Living Room page: arc gauges for 21 degrees Celsius and 46 percent humidity, the air meter at Good, Occupied, four lights with bars in their own colours (Ceiling 50 percent, Floor Lamp 75 percent, Reading Lamp off, Shelf 40 percent), and the track playing on the speaker.](docs/img/room.png) |
+| **More**: doors, scenes, thermostat | **A room**: gauges, air meter, lights |
+| ![The Radar page: the hallway sensor's 120 degree field with range rings every metre, a dashed detection zone, the scan line sweeping, and one target walking at about a metre per second, its speed beside it and a short fading trail behind it.](docs/img/radar.png) | ![Night view: only the clock, 11:12 PM, in dim amber, and one status line, "Back Door unlocked", in dimmed red; everything else is dark.](docs/img/night.png) |
+| **Radar**, one person walking | **Night**: the clock and exceptions only |
+| ![A drag in progress on Main: the page follows the finger to the left with the More page coming in from the right, a faint reticle where the finger went down and a short trail of coloured dots behind it.](docs/img/touch.png) | |
+| **Touch**: a drag in progress, reticle and trail | |
+
+![The bottom edge of Main with the scrolling ticker: the end of a local headline, a green dot, then the yellow WORLD label and a world headline.](docs/img/ticker.png)
+
+**Ticker**: the headline strip along the bottom edge (`ticker: scroll`).
+
+To capture what a real display shows, see [docs/KIOSK.md](docs/KIOSK.md#screenshots-with-grim).
 
 ## Installation
 

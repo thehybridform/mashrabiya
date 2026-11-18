@@ -28,6 +28,8 @@ First public release.
   mirror mode (double tap for pure glass), an open-door alert, an RSS news ticker (`ticker: fade | scroll`).
 - `text_scale` (0.8 to 2) with a 9 mm minimum text size at the default; `prefers-contrast: more` and
   `prefers-reduced-motion` honoured.
+- A demo house (`demo/`): the card in a plain browser with a made-up home and a fake `hass`, whose
+  service calls do nothing; the README screenshots are taken from it (`node demo/capture.mjs`).
 - Optional frame-rate meter (`debug_fps`, or `?fps=1` on the dashboard URL).
 - A version banner in the browser console and a `window.customCards` entry ("Mashrabiya") for the card picker.
 - Documentation: installation (HACS and manual), Raspberry Pi 5 kiosk recipe, design rationale, hardware guide.

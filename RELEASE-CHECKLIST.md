@@ -58,9 +58,12 @@ need a decision before 1.0.
 - [ ] **Create the GitHub repository** (`mashrabiya`), add a one-line description and topics
       (`home-assistant`, `hacs`, `lovelace`, `custom-card`, `smart-mirror`, `kiosk`), push `main`.
 - [ ] **Enable GitHub Actions** and confirm the first `test` run is green.
-- [ ] **Screenshots.** Capture the files listed in [README.md](README.md#screenshots) into `docs/img/`,
-      with alt text, and replace the TODO table in the README with the images. Add a short screen
-      recording of a page swipe and the touch effects, and a photo of a mounted build.
+- [x] **Screenshots.** The eight images in [README.md](README.md#screenshots) are in `docs/img/`, with
+      alt text. They come from the [demo house](demo/README.md) rendered in headless Chrome at the
+      glass's 1440 x 2560 CSS pixels (`node demo/capture.mjs` re-takes them), not from glass; re-take them
+      when the card's look changes.
+- [ ] **Recording and photo.** Add a short screen recording of a page swipe and the touch effects, and a
+      photo of a mounted build (`docs/img/mounted.jpg`, lit and unlit).
 - [ ] **Install through HACS from scratch** as a custom repository on a clean Home Assistant, following
       [docs/INSTALL.md](docs/INSTALL.md) exactly. Confirm that HACS copies **both** files into
       `www/community/mashrabiya/` (if releases attach assets, attach both JS files, or HACS fetches only
