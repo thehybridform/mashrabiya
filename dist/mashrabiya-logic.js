@@ -538,6 +538,29 @@
     return dt >= 0 && dt <= DOUBLE_TAP.ms && Math.hypot(cur.x - prev.x, cur.y - prev.y) <= DOUBLE_TAP.mm * mm;
   }
 
+  // Three-finger toggle. `start` and `end` are the {x, y} (px) of the same three fingers, in the same
+  // order, when the gesture began and when its first finger lifted; `mm` is the px per mm. Any
+  // three-finger swipe toggles the display (mirror mode), whichever way it goes:
+  // - a swipe: the fingers' centre travels at least swipeMm, in any direction;
+  // - a gather or spread: their mean distance from the centre ends at gatherRatio or less (1/gatherRatio
+  //   or more) AND changes by at least gatherMm (the floor keeps a jitter of a tight cluster from counting).
+  // Returns "toggle", or null for too little movement, any other finger count (two fingers do nothing),
+  // or bad input.
+  const MULTI = { swipeMm: 25, gatherRatio: 0.6, gatherMm: 10 };
+  function multiGesture(start, end, mm) {
+    if (!Array.isArray(start) || !Array.isArray(end) || start.length !== 3 || end.length !== 3) return null;
+    if (!finite(mm) || mm <= 0) return null;
+    const ok = (p) => p && finite(p.x) && finite(p.y);
+    if (!start.every(ok) || !end.every(ok)) return null;
+    const centre = (ps) => ({ x: ps.reduce((a, p) => a + p.x, 0) / 3, y: ps.reduce((a, p) => a + p.y, 0) / 3 });
+    const c0 = centre(start), c1 = centre(end);
+    if (Math.hypot(c1.x - c0.x, c1.y - c0.y) >= MULTI.swipeMm * mm - 1e-9) return "toggle";
+    const spread = (ps, c) => ps.reduce((a, p) => a + Math.hypot(p.x - c.x, p.y - c.y), 0) / 3;
+    const m0 = spread(start, c0), m1 = spread(end, c1);
+    if (Math.abs(m1 - m0) < MULTI.gatherMm * mm - 1e-9) return null;
+    return m1 <= m0 * MULTI.gatherRatio || m1 * MULTI.gatherRatio >= m0 ? "toggle" : null;
+  }
+
   // The veil fades in over inMs and out over outMs; under reduced motion nearly instantly.
   const MIRROR = { inMs: 400, outMs: 600, reducedMs: 100, alertOutMs: 150 };
   function mirrorFadeMs(which, reduced) {
@@ -1763,7 +1786,7 @@
 
 
  pageIndexFor, firstRoomIndex,
-    DRAG, dragNeighbour, dragDecision, dragOffsets, settleMs, DOUBLE_TAP, isDoubleTap, MIRROR, mirrorFadeMs, mirrorAlertExit, fadeProgress, fadeFrames, fadeScale, fadeTiming, FADE, currentOpacity,
+    DRAG, dragNeighbour, dragDecision, dragOffsets, settleMs, DOUBLE_TAP, isDoubleTap, MULTI, multiGesture, MIRROR, mirrorFadeMs, mirrorAlertExit, fadeProgress, fadeFrames, fadeScale, fadeTiming, FADE, currentOpacity,
     GAUGE, gaugeFraction, arcPoint, arcPath, arcDash, tempScale, tempTone, humidityTone, airSegment, fanSpinSeconds,
     newsHeadlines, tickerSegments, tickerSeconds,
     SEVERITY, severityOf, conditionTone, statusTone,
