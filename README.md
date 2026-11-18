@@ -13,8 +13,9 @@ dashboard, is sized in physical millimetres so text is legible at arm's length a
 doorway, and draws everything in light on black, because on a two-way mirror black *is* the mirror and
 anything filled glows through the glass as a rectangle.
 
-> Status: 0.1.0, release candidate. The card is tested and generic; see
-> [RELEASE-CHECKLIST.md](RELEASE-CHECKLIST.md) for what is left before the first tagged release.
+> Status: 0.1.1, early release. The card is tested and generic, and runs on one real mirror; see
+> [RELEASE-CHECKLIST.md](RELEASE-CHECKLIST.md) for what is still unverified (clean installs, minimum
+> Home Assistant version).
 
 ## Features
 

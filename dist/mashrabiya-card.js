@@ -202,7 +202,7 @@
 // Carry this module's ?v= cache-buster over so both files update together.
 await import(new URL("./mashrabiya-logic.js" + new URL(import.meta.url).search, import.meta.url).href);
 const L = globalThis.MashrabiyaLogic;
-const VERSION = "0.1.0";
+const VERSION = "0.1.1";
 const T = L.STRINGS; // every UI word (English; a translation replaces the table in mashrabiya-logic.js)
 
 // Config (resolved by L.resolveConfig, documented in docs/INSTALL.md). Defaults, all generic:
