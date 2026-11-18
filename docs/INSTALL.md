@@ -172,8 +172,8 @@ when this table and the code disagree, the code wins (and that is a bug to fix h
 | `scent` | boolean | `true` | `false` hides fragrance diffusers on the room pages and their "scent low" status line. Diffusers are discovered, see [Fragrance diffusers](#fragrance-diffusers) |
 | `night_start` | string `HH:MM` | `22:00` | Start of the night window (may wrap midnight) |
 | `night_end` | string `HH:MM` | `06:30` | End of the night window |
-| `mirror_mode` | boolean | `true` | A double tap (two taps within 350 ms and 10 mm) on bare glass, not on a button, blacks the screen out so the glass is a pure mirror. `false` turns it off |
-| `mirror_timeout` | number (seconds) | `180` | How long mirror mode lasts before the screen fades back (600 ms) to the page you were on. Another double tap, or a new open-door alert, ends it sooner |
+| `mirror_mode` | boolean | `true` | A double tap (two taps within 350 ms and 10 mm) on bare glass, not on a button, blacks the screen out so the glass is a pure mirror. Any three-finger swipe (any direction, or fingers gathering or spreading) toggles it. `false` turns all of it off |
+| `mirror_timeout` | number (seconds) | `180` | How long mirror mode lasts before the screen fades back (600 ms) to the page you were on. Another double tap, a three-finger swipe, or a new open-door alert, ends it sooner |
 | `debug_fps` | boolean | `false` | Shows a frame-rate readout, top right. `?fps=1` in the page URL does the same without editing the dashboard |
 | `font_url` | string (URL) or null | Google Fonts stylesheet for Atkinson Hyperlegible | Stylesheet that declares the face. `null` fetches nothing and uses system fonts (offline kiosks, privacy) |
 | `font_family` | string | `Atkinson Hyperlegible` | Family name the stylesheet declares; set it when you change `font_url` |

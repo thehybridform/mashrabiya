@@ -110,6 +110,9 @@
  *     as the one finger (L.treatAsPrimary): it taps (activated by the card, as Chromium sends it no
  *     click), swipes, ripples, and releases the ghost's stuck press or drag. One live companion keeps
  *     today's rule: multi-touch is neither tap nor swipe. Never more than a single real touch can do.
+ *   - Any three-finger swipe toggles the screen (mirror mode, L.multiGesture): any direction, or toward /
+ *     away from the fingers' centre; decided when the first finger lifts (_multiTrack). Two fingers do
+ *     nothing. Off with mirror_mode.
  *   - Room pages are READ-ONLY: information, no controls but Main (test/source.test.js holds
  *     the ROOM_PAGE template and the marked render section to that). Rooms come from the HA registries
  *     on hass (areas, devices, entities): entity area, else device area; hidden and config/diagnostic
@@ -1207,6 +1210,10 @@ class MashrabiyaCard extends HTMLElement {
     this.shadowRoot.addEventListener("pointermove", (e) => this._trackPointer(e), true);
     this.shadowRoot.addEventListener("pointerup", (e) => this._trackPointer(e), true);
     this.shadowRoot.addEventListener("pointercancel", (e) => this._trackPointer(e), true);
+    this.shadowRoot.addEventListener("pointerdown", (e) => this._multiTrack(e), true);
+    this.shadowRoot.addEventListener("pointermove", (e) => this._multiTrack(e), true);
+    this.shadowRoot.addEventListener("pointerup", (e) => this._multiTrack(e), true);
+    this.shadowRoot.addEventListener("pointercancel", (e) => this._multiTrack(e), true);
     this.shadowRoot.addEventListener("pointerdown", (e) => this._gestureDown(e), true);
     this.shadowRoot.addEventListener("pointermove", (e) => this._gestureMove(e), true);
     this.shadowRoot.addEventListener("pointerup", (e) => this._gestureUp(e), true);
@@ -1237,6 +1244,49 @@ class MashrabiyaCard extends HTMLElement {
   _trackPointer(e) {
     if (e.type === "pointerup" || e.type === "pointercancel") this._pointers.delete(e.pointerId);
     else if (e.type === "pointerdown" || this._pointers.has(e.pointerId)) this._pointers.set(e.pointerId, e.timeStamp);
+  }
+
+  // --- three-finger toggle ---------------------------------------------------------------------
+  // Runs after _trackPointer on the same capture-phase stream. When a pointerdown leaves exactly three
+  // live fingers on the glass (tracked and not stale: a stuck ghost is never a finger), their positions
+  // then are the gesture's start; any other count abandons it. The first of the three to lift decides
+  // (L.multiGesture): any three-finger swipe, in any direction or toward / away from their centre,
+  // toggles the screen (mirror mode). A pointercancel decides nothing. _gestureDown already reads
+  // multi-touch as neither tap nor swipe, so no page changes and no button fires. Off with mirror_mode.
+  _multiTrack(e) {
+    const xy = this._fingerXY || (this._fingerXY = new Map());
+    const m = this._multi;
+    const id = e.pointerId;
+    const at = { x: e.clientX, y: e.clientY };
+    if (e.type === "pointercancel") {
+      xy.delete(id);
+      if (m && m.ids.includes(id)) this._multi = null;
+      return;
+    }
+    if (e.type === "pointerup") {
+      xy.delete(id);
+      if (!m || !m.ids.includes(id)) return;
+      this._multi = null;
+      const end = m.ids.map((f) => (f === id ? at : m.last.get(f)));
+      const what = L.multiGesture(m.start, end, this._mmPx());
+      if (what === "toggle") this._mirror ? this._mirrorExit(false) : this._mirrorEnter();
+      return;
+    }
+    if (e.type === "pointermove") {
+      if (xy.has(id)) xy.set(id, at);
+      if (m && m.ids.includes(id)) m.last.set(id, at);
+      return;
+    }
+    if (e.type !== "pointerdown") return;
+    xy.set(id, at);
+    for (const f of [...xy.keys()]) if (!this._pointers.has(f)) xy.delete(f); // lifted where the card never saw it
+    if (!this._config.mirror_mode) {
+      this._multi = null;
+      return;
+    }
+    const stale = new Set(L.staleIds(this._pointers, e.timeStamp, L.TOUCH.staleMs));
+    const live = [...xy.keys()].filter((f) => f === id || !stale.has(f));
+    this._multi = live.length === 3 ? { ids: live, start: live.map((f) => xy.get(f)), last: new Map(live.map((f) => [f, xy.get(f)])) } : null;
   }
 
   // Whether the card reads this pointer as the one finger: the browser's primary flag, overruled only when
@@ -1765,7 +1815,13 @@ class MashrabiyaCard extends HTMLElement {
     }
     window.addEventListener("connection-status", this._onConn);
     // A hidden page gets no pointerup for touches that end meanwhile: start the tracking afresh.
-    if (!this._onVis) this._onVis = () => document.hidden && this._pointers && this._pointers.clear();
+    if (!this._onVis)
+      this._onVis = () => {
+        if (!document.hidden) return;
+        if (this._pointers) this._pointers.clear();
+        if (this._fingerXY) this._fingerXY.clear();
+        this._multi = null;
+      };
     document.addEventListener("visibilitychange", this._onVis);
     this._timer = setInterval(() => this._tick(false), 1000);
     this._tick(true);

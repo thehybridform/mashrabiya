@@ -318,6 +318,13 @@ glance.
   idle-return timer, held while mirrored, is re-armed. Reduced motion fades in 100 ms. Limit: a black
   overlay still leaves the LCD backlight on, so some light leaks; a true backlight-off needs a host-side
   helper and is out of scope.
+- **Three-finger toggle.** Any three-finger swipe toggles mirror mode (L.multiGesture, L.MULTI): the
+  fingers' centre travelling 25 mm or more in any direction, or the fingers gathering toward / spreading
+  from their centre (their mean distance from it to 60 % or less, or 1/0.6 or more, and by 10 mm).
+  Decided when the first of the three lifts; a pointercancel decides nothing. Only live fingers count (a
+  stale IR ghost never does), any other finger count is ignored (two fingers do nothing), and
+  multi-touch is never a tap or a page swipe, so nothing else fires along the way. Off with
+  `mirror_mode: false`.
 - **Fade transition** (`transition: fade`). Pages crossfade instead of sliding, and the fade is
   asymmetric (L.fadeTiming): the outgoing page leaves 1 to 0 over 360 ms (ease-in-out, as ever); the
   incoming page comes up 0 to 1 over 700 ms on a decelerating curve (cubic-bezier(0.16, 1, 0.3, 1)),
