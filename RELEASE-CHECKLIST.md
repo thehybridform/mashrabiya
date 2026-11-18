@@ -33,7 +33,7 @@ need a decision before 1.0.
 
 ## Before publishing
 
-- [ ] **Publish from a fresh, single-commit history.** The first local commit (`d8c8cfc`, "Mashrabiya
+- [x] **Publish from a fresh, single-commit history.** The first local commit (`d8c8cfc`, "Mashrabiya
       0.1.0: initial public release candidate") stores the privacy scan's banned strings base64-encoded,
       which anyone can decode. Later commits replace them with SHA-256 digests, but the old list is still
       in this repository's history, so **never push this history**. Publish a squashed snapshot instead:
@@ -55,9 +55,9 @@ need a decision before 1.0.
 
       Push only `publish` (as `main`): `git push -u origin publish:main`. Do not push any other branch or
       tag of this local repository, and delete `/tmp/old-b64.txt` afterwards.
-- [ ] **Create the GitHub repository** (`mashrabiya`), add a one-line description and topics
+- [x] **Create the GitHub repository** (`mashrabiya`), add a one-line description and topics
       (`home-assistant`, `hacs`, `lovelace`, `custom-card`, `smart-mirror`, `kiosk`), push `main`.
-- [ ] **Enable GitHub Actions** and confirm the first `test` run is green.
+- [x] **Enable GitHub Actions** and confirm the first `test` run is green.
 - [x] **Screenshots.** The eight images in [README.md](README.md#screenshots) are in `docs/img/`, with
       alt text. They come from the [demo house](demo/README.md) rendered in headless Chrome at the
       glass's 1440 x 2560 CSS pixels (`node demo/capture.mjs` re-takes them), not from glass; re-take them
@@ -74,7 +74,7 @@ need a decision before 1.0.
       it has not been measured. The card needs the `weather/subscribe_forecast` WebSocket message and
       the area / device / entity registries on the frontend `hass` object; test on the oldest version
       you want to support and add it to `hacs.json` and INSTALL.md. Also record the Chromium version tested.
-- [ ] **Tag `v0.1.0`**, create a GitHub release with notes from CHANGELOG.md (change "Unreleased" to
+- [x] **Tag `v0.1.0`**, create a GitHub release with notes from CHANGELOG.md (change "Unreleased" to
       the date), and attach `mashrabiya-card.js` and `mashrabiya-logic.js`.
 - [ ] **Submit to the HACS default list** (a pull request to `hacs/default`) once there is a tagged
       release, the README renders in HACS, and the HACS validation action passes. Consider adding the
