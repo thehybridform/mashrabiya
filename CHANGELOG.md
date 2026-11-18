@@ -4,6 +4,16 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.2.1] - 2026-11-17
+
+### Fixed
+
+- A stuck IR pointer no longer blocks real touches. Something resting against an IR touch frame's
+  border can report a touch that never lifts, and Chromium then treats every real touch as a second
+  finger, so nothing responded. The card now tracks the pointers that are down; one with no event for
+  1.5 s is stale, and a touch whose companions are all stale is read as the single finger (tap, swipe
+  and ripple work, and the ghost's stuck press is released). See "Stuck pointers" in `docs/DESIGN.md`.
+
 ## [0.2.0] - 2026-11-17
 
 ### Added
@@ -76,6 +86,7 @@ First public release.
 - Lock-only by construction: the card can lock and can never unlock or open; a test fails if an unlock
   or open call is added.
 
+[0.2.1]: https://github.com/thehybridform/mashrabiya/releases/tag/v0.2.1
 [0.2.0]: https://github.com/thehybridform/mashrabiya/releases/tag/v0.2.0
 [0.1.1]: https://github.com/thehybridform/mashrabiya/releases/tag/v0.1.1
 [0.1.0]: https://github.com/thehybridform/mashrabiya/releases/tag/v0.1.0
