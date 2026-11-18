@@ -344,6 +344,16 @@ glance.
 - **Click suppression.** A touch that travels more than 8 mm, or is recognised as a swipe, never
   activates the button it started on. Multi-touch is neither swipe nor tap. Each button also ignores a
   second press within 700 ms.
+- **Stuck pointers.** An IR frame can report a touch that never ends (a cloth, a bottle or a sleeve
+  blocking the beams, or a missed release). Chromium keeps that ghost as the primary pointer and flags
+  every real touch after it as a second finger, which the rule above would ignore until the ghost
+  cleared. So the card tracks the pointers still down (id and time of their last event) and reads a
+  "second" pointer as the one finger when every other pointer has been silent for at least
+  `L.TOUCH.staleMs` (1.5 s; `L.treatAsPrimary`). It then taps, swipes and ripples like any single
+  touch; because Chromium sends no click for it, the card activates the button itself on a tap, under
+  the same rules (not moved, not suppressed, the 700 ms debounce). The stale ghosts are forgotten, and
+  a press or a drag they were holding is let go. A companion that moved or landed within 1.5 s still
+  makes it multi-touch. This never lets anything happen that a single real touch could not already do.
 - **One scroll owner.** Pages never scroll natively (`touch-action: none`). A vertical drag on a room,
   radar or More page that outgrows the glass scrolls its body from the same pointer stream the swipes use,
   so a horizontal swipe can never be stolen by a native scroll, whether the frame reports touch or mouse

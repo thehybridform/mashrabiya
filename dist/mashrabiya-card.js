@@ -104,6 +104,12 @@
 
  *   - Idle 60 s on any detail page slides back to Main; any touch restarts the 60 s.
  *   - Swipes never press buttons: travel past 8 mm or a classified swipe suppresses the click.
+ *   - Stuck pointers are tolerated: something blocking the IR beams can report a touch that never ends,
+ *     and Chromium then flags every real touch as a second finger. The card tracks the pointers still
+ *     down; a "second" pointer whose every companion has been silent for L.TOUCH.staleMs (1.5 s) is read
+ *     as the one finger (L.treatAsPrimary): it taps (activated by the card, as Chromium sends it no
+ *     click), swipes, ripples, and releases the ghost's stuck press or drag. One live companion keeps
+ *     today's rule: multi-touch is neither tap nor swipe. Never more than a single real touch can do.
  *   - Room pages are READ-ONLY: information, no controls but Main (test/source.test.js holds
  *     the ROOM_PAGE template and the marked render section to that). Rooms come from the HA registries
  *     on hass (areas, devices, entities): entity area, else device area; hidden and config/diagnostic
@@ -1194,6 +1200,13 @@ class MashrabiyaCard extends HTMLElement {
       });
     }
     this.shadowRoot.querySelectorAll("button[data-action]").forEach((b) => this._bind(b));
+    // Pointers still down (id -> timeStamp of their last event), read by _primary. Registered first, so
+    // every gesture handler sees the map already up to date for the event it is handling.
+    this._pointers = new Map();
+    this.shadowRoot.addEventListener("pointerdown", (e) => this._trackPointer(e), true);
+    this.shadowRoot.addEventListener("pointermove", (e) => this._trackPointer(e), true);
+    this.shadowRoot.addEventListener("pointerup", (e) => this._trackPointer(e), true);
+    this.shadowRoot.addEventListener("pointercancel", (e) => this._trackPointer(e), true);
     this.shadowRoot.addEventListener("pointerdown", (e) => this._gestureDown(e), true);
     this.shadowRoot.addEventListener("pointermove", (e) => this._gestureMove(e), true);
     this.shadowRoot.addEventListener("pointerup", (e) => this._gestureUp(e), true);
@@ -1213,21 +1226,59 @@ class MashrabiyaCard extends HTMLElement {
     this.shadowRoot.querySelectorAll("button.pressed").forEach((b) => b.classList.remove("pressed"));
   }
 
+  // --- stale-touch tolerance -----------------------------------------------------------------
+  // Something blocking the IR frame's beams can report a pointer that goes down and never comes up: a
+  // stuck ghost. Chromium keeps it as the primary pointer, so every real touch after it arrives flagged
+  // secondary and would read as multi-touch (no tap, no swipe) until the ghost cleared. The card
+  // tracks the pointers it has seen go down, and a non-primary pointer counts as primary when every other
+  // one has been silent for L.TOUCH.staleMs (L.treatAsPrimary). A move only refreshes a pointer already
+  // down (a hovering mouse is never "down"). lostpointercapture does not end a pointer: it follows every
+  // pointerup anyway, and on its own (the captured node left the DOM) the finger is still on the glass.
+  _trackPointer(e) {
+    if (e.type === "pointerup" || e.type === "pointercancel") this._pointers.delete(e.pointerId);
+    else if (e.type === "pointerdown" || this._pointers.has(e.pointerId)) this._pointers.set(e.pointerId, e.timeStamp);
+  }
+
+  // Whether the card reads this pointer as the one finger: the browser's primary flag, overruled only when
+  // stuck ghosts alone make it secondary.
+  _primary(e) {
+    const others = [];
+    for (const [id, t] of this._pointers) if (id !== e.pointerId) others.push(t);
+    return L.treatAsPrimary(e.isPrimary, others, e.timeStamp, L.TOUCH.staleMs);
+  }
+
+  // Primary for the card although the browser says secondary. Chromium sends no click for such a pointer,
+  // so _gestureUp activates the button its tap lands on itself.
+  _promoted(e) {
+    return e.isPrimary === false && this._primary(e);
+  }
+
   // The page width and the mm scale are read here, once per touch, so a drag never reads layout per move.
   _gestureDown(e) {
+    const primary = this._primary(e);
+    if (primary) {
+      // Any other pointer still tracked is a stuck ghost: forget it, and let go of the press it held (this
+      // runs in the capture phase, before the new button's own pointerdown marks it pressed).
+      const stale = L.staleIds(this._pointers, e.timeStamp, L.TOUCH.staleMs).filter((id) => id !== e.pointerId);
+      for (const id of stale) this._pointers.delete(id);
+      if (stale.length) this._releasePressed();
+    }
     if (!this._mirror) {
       this._onAnyTouch();
       this._fxDown(e); // touch feedback reads the same stream; it never changes what the gesture means
     }
-    if (this._drag) this._dragSpringBack(); // a second finger, or a lost pointerup: the drag is over
-    if (e.isPrimary === false) {
+    if (this._drag) this._dragSpringBack(); // a second finger, a lost pointerup or a stale ghost: the drag is over
+    if (!primary) {
       this._gesture = null; // multi-touch: not a swipe, and not a tap either
       this._suppressClick = true;
       return;
     }
     this._suppressClick = false;
     const w = (this._fxRect && this._fxRect.width) || this.clientWidth;
-    this._gesture = { id: e.pointerId, x: e.clientX, y: e.clientY, t: e.timeStamp, w, mm: this._mmPx() };
+    const promoted = this._promoted(e);
+    const path = promoted && typeof e.composedPath === "function" ? e.composedPath() : [];
+    const btn = path.find((n) => n && n.tagName === "BUTTON" && n.dataset && n.dataset.action) || null;
+    this._gesture = { id: e.pointerId, x: e.clientX, y: e.clientY, t: e.timeStamp, w, mm: this._mmPx(), promoted, btn };
   }
 
   // --- mirror mode (double tap) ----------------------------------------------------------------
@@ -1351,7 +1402,12 @@ class MashrabiyaCard extends HTMLElement {
     }
     if (L.movedPast(dx, dy, SLOP_MM * g.mm)) this._suppressClick = true;
     const dir = L.swipeDirection(dx, dy, e.timeStamp - g.t, SWIPE_MM * g.mm);
-    if (!g.drag && !dir && !L.movedPast(dx, dy, SLOP_MM * g.mm)) this._tapUp(e, g, true);
+    if (!g.drag && !dir && !L.movedPast(dx, dy, SLOP_MM * g.mm)) {
+      this._tapUp(e, g, true);
+      // A promoted pointer's tap gets no click from Chromium: activate its button here, under exactly the
+      // rules a click obeys (a tap, not suppressed; _activate's 700 ms debounce stops a double if one comes).
+      if (g.promoted && g.btn && g.btn.isConnected && !g.btn.hidden && !g.btn.disabled && !this._suppressClick) this._activate(g.btn);
+    }
     if (g.drag) {
       this._dragEnd(e, dx, dir);
       return;
@@ -1708,6 +1764,9 @@ class MashrabiyaCard extends HTMLElement {
       };
     }
     window.addEventListener("connection-status", this._onConn);
+    // A hidden page gets no pointerup for touches that end meanwhile: start the tracking afresh.
+    if (!this._onVis) this._onVis = () => document.hidden && this._pointers && this._pointers.clear();
+    document.addEventListener("visibilitychange", this._onVis);
     this._timer = setInterval(() => this._tick(false), 1000);
     this._tick(true);
     this._subscribeForecast();
@@ -1716,6 +1775,7 @@ class MashrabiyaCard extends HTMLElement {
 
   disconnectedCallback() {
     if (this._onConn) window.removeEventListener("connection-status", this._onConn);
+    if (this._onVis) document.removeEventListener("visibilitychange", this._onVis);
     clearInterval(this._timer);
     for (const id of this._tweens.values()) cancelAnimationFrame(id);
     this._tweens.clear();
@@ -3215,7 +3275,7 @@ class MashrabiyaCard extends HTMLElement {
 
   // A thin ring in the button's tone expands from the finger and fades (CSS keyframes, 460 ms).
   _ripple(b, e) {
-    if (this._reduced() || e.isPrimary === false) return;
+    if (this._reduced() || !this._primary(e)) return;
     const r = b.getBoundingClientRect();
     const rip = document.createElement("span");
     rip.className = "ripple";
