@@ -40,7 +40,7 @@
  *
  * CONFIGURATION: the card names no house. Its config (docs/INSTALL.md) is resolved by
  * L.resolveConfig(config, hass): timezone and units from hass.config, the weather entity and the locks
- * discovered, everything else configured; a feature without its config is hidden (no Leaving button
+ * discovered, everything else configured (more_button: false drops Main's More button, page 2 stays one swipe away); a feature without its config is hidden (no Leaving button
  * without a script, no ticker without feeds, no scenes without a list). Every UI word is in L.STRINGS.
  *
  * MASHRABIYA (the design language: the interface is a reflection that knows things; everything is
@@ -124,6 +124,25 @@
  *     DISCOVERED, never configured by id: every sensor.<prefix>_presence_target_<n>_x in the states
  *     (L.radarList), named by its area (entity area, else device area) or the prettified prefix.
  *     config radar: false hides the page.
+ *
+ * MORE PAGE AS INSTRUMENTS (home controls; docs/DESIGN.md "The More page"). Sections stack from the
+ * top 15 mm apart and size to their content (no space-between), each in corner brackets:
+ *   - Doors: one row of large padlocks (LOCK_GLYPH, 34 mm), each with its name (L.doorLabel: "Front Door
+ *     Lock" says "Front" under the Doors heading) and its state word under it. A tap may only lock
+ *     (lockOne -> lock.lock); the padlock's state is visual only (_paintPadlock).
+ *   - Scenes: one row of scene glyphs (24 mm) with their names; the room's Off sits in the heading beside
+ *     the title, so it never leaves a scene alone on a second row.
+ *   - Both rows: up to 4 padlocks / 5 scenes across (3 above text_scale 1.25), beyond that the fewest rows
+ *     filled evenly with the shorter row centred (L.moreRows / L.rowSplit, _layoutRow on half-columns).
+ *   - Thermostat: the room pages' arc gauge (_gaugeNode / _paintGauge, up to 175 mm wide): the inside
+ *     temperature sweeps the arc in the scale's colours, a tick marks the target; − and + either side
+ *     (26 mm), "Target 73°" under it (the pending target at once after a tap), Heat / Off below.
+ *   - Now Playing: per player the media equaliser (moving while it plays, a loop), its name as a
+ *     micro-label over a 13 mm title, and play/pause.
+ *   - House: the presence / air / internet line at 11 mm.
+ *   The entrance treats them like a room page's: padlocks and glyphs pop and draw in, the gauge settles
+ *   and its reading rolls in (_drawIn, _settleIn). At text_scale 1 the house (4 doors, 5 scenes and Off,
+ *   the thermostat, two players, the House line) fits the glass without scrolling.
  *
  * RADAR PAGE (one scope per mmWave radar; stacked, or two columns from three up, L.scopeSize)
  *   - The field is the sensor's +/-60 degree wedge with the sensor at the bottom centre, range rings
@@ -308,6 +327,8 @@ const ICONS = {
 const WX = { sun: "wxSun", moon: "wxMoon", partly: "wxPartly", cloud: "wxCloud", fog: "wxFog", rain: "wxRain", snow: "wxSnow", storm: "wxStorm", wind: "wxWind" };
 // A padlock with its door beside it (shown when that door is open); state set by _paintPadlock.
 const LOCK_GLYPH = `<span class="lk"><span class="padlock loop" data-lock="offline">${ICONS.padlock}</span><span class="lk-door">${ICONS.doorOpen}</span></span>`;
+// The media equaliser's three bars (room rows and More's Now Playing); they move while it plays (.eq.loop).
+const EQ_BARS = "<i></i><i></i><i></i>";
 // Edge rails (detail pages): a gradient hairline down each side, a second gradient that fades in and out
 // over it (the hue drift) and a bright highlight that travels its length. Transform and opacity only.
 const RAIL_BARS = '<span class="rail l"><i class="base"></i><i class="alt"></i><i class="hi"></i></span><span class="rail r"><i class="base"></i><i class="alt"></i><i class="hi"></i></span>';
@@ -400,7 +421,7 @@ const STYLE = `
 [data-tone="attention"] { --tone: var(--attention); }
 [data-tone="alert"] { --tone: var(--alert); --tone-text: var(--alert-text); }
 .cond[data-tone], .rain[data-tone], .line[data-tone], .facts b[data-tone] { color: var(--tone-text); }
-.target .sub[data-tone]:not(.ok):not(.fail) { color: var(--tone-text); }
+.target-line b[data-tone], .target-line .sub[data-tone]:not(.ok):not(.fail) { color: var(--tone-text); }
 button[data-tone]:not(.pressed) svg { color: var(--tone); }
 button[data-tone]:not(.pressed) .sub:not(.ok):not(.fail) { color: var(--tone-text); }
 * { box-sizing: border-box; }
@@ -583,11 +604,13 @@ button:not([data-tone]):not(.pressed) svg { color: var(--fg2); }
   font-size: calc(9 * var(--tmm)); line-height: 1.15;
 }
 /* Scrolls (by drag, _gestureMove) when its content outgrows it: larger text, or a long scene list. Ends
-   above the navigation row; the padding keeps the first and last brackets inside (else they alone overflow). */
+   above the navigation row; the padding keeps the first and last brackets inside (else they alone overflow).
+   Sections size to their content and stack from the top, 15 mm apart (each bracket reaches 3 mm out, so
+   9 mm of black between the arms): spreading them over the glass left wide empty bands between them. */
 .panes {
   position: absolute; top: calc(20 * var(--mm)); left: calc(25 * var(--mm)); right: calc(25 * var(--mm));
-  bottom: calc(58 * var(--mm)); display: flex; flex-direction: column; justify-content: space-between;
-  gap: calc(11 * var(--mm)); overflow-y: auto; overflow-x: hidden; scrollbar-width: none;
+  bottom: calc(58 * var(--mm)); display: flex; flex-direction: column; justify-content: flex-start;
+  gap: calc(15 * var(--mm)); overflow-y: auto; overflow-x: hidden; scrollbar-width: none;
   padding: calc(4 * var(--mm)) 0;
 }
 .panes::-webkit-scrollbar { display: none; }
@@ -600,22 +623,55 @@ h2.micro { font-size: calc(9 * var(--tmm)); font-weight: 700; color: var(--fg2);
 .small { min-height: calc(24 * var(--mm)); padding: calc(2 * var(--mm)) calc(1 * var(--mm)); gap: calc(1 * var(--mm)); }
 .small .label { font-weight: 700; }
 .small .sub { color: var(--fg2); font-size: calc(9 * var(--tmm)); }
-.small .sub.sec, .small .sub.att { font-weight: 700; }
 .small svg { width: calc(10 * var(--tmm)); height: calc(10 * var(--tmm)); }
 .chip .lk .ic, .chip .lk svg { width: calc(13 * var(--tmm)); height: calc(13 * var(--tmm)); }
 .small[aria-pressed="true"] .label { text-decoration: underline; text-decoration-thickness: calc(0.6 * var(--mm)); text-underline-offset: calc(1.5 * var(--mm)); }
-.thermo { display: grid; grid-template-columns: 1fr auto auto auto; align-items: center; column-gap: calc(8 * var(--mm)); }
-.thermo .now { font-size: calc(9 * var(--tmm)); color: var(--fg2); }
-.thermo .now b { display: block; font-size: calc(18 * var(--tmm)); color: var(--fg); }
-.step { width: calc(22 * var(--tmm)); height: calc(22 * var(--tmm)); font-size: calc(14 * var(--tmm)); font-weight: 700; }
-.target { text-align: center; min-width: calc(30 * var(--mm)); }
-.target b { display: block; font-size: calc(18 * var(--tmm)); }
-.target .sub { font-size: calc(9 * var(--tmm)); color: var(--fg2); }
-.modes { margin-top: calc(8 * var(--mm)); }
-.media { display: grid; grid-template-columns: 1fr calc(50 * var(--mm)); align-items: center; column-gap: calc(8 * var(--mm)); }
-.media + .media { margin-top: calc(8 * var(--mm)); }
-.media .title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.facts { display: flex; flex-wrap: wrap; column-gap: calc(14 * var(--mm)); row-gap: calc(3 * var(--mm)); }
+/* THE MORE PAGE AS INSTRUMENTS (docs/DESIGN.md "The More page"). Doors and scenes: one row each
+   (L.moreRows, _layoutRow: half-columns, so a shorter second row sits centred). Each instrument is a
+   glyph over its name and state, under the button's hairline; the whole column is the target. */
+.inst-row { display: grid; column-gap: calc(4 * var(--mm)); row-gap: calc(8 * var(--mm)); }
+.padlock-inst { min-height: calc(15 * var(--mm)); justify-content: flex-start; gap: calc(1.5 * var(--mm)); padding: calc(5 * var(--mm)) 0 calc(3 * var(--mm)); min-width: 0; }
+.padlock-inst .lk svg { width: calc(34 * var(--tmm)); height: calc(34 * var(--tmm)); }
+.padlock-inst .lk-door svg { width: calc(14 * var(--tmm)); height: calc(14 * var(--tmm)); }
+.padlock-inst .label, .scene-inst .label { font-size: calc(10 * var(--tmm)); font-weight: 700; line-height: 1.1; max-width: 100%; overflow-wrap: anywhere; }
+.padlock-inst .sub { font-size: calc(10 * var(--tmm)); line-height: 1.1; color: var(--fg2); min-height: 1.1em; }
+.padlock-inst .sub.sec, .padlock-inst .sub.att { font-weight: 700; }
+.scene-inst { min-height: calc(15 * var(--mm)); justify-content: flex-start; gap: calc(2 * var(--mm)); padding: calc(5 * var(--mm)) 0 calc(3 * var(--mm)); min-width: 0; }
+.scene-inst svg { width: calc(24 * var(--tmm)); height: calc(24 * var(--tmm)); }
+.scene-inst .sub { font-size: calc(9 * var(--tmm)); color: var(--fg2); }
+.scene-inst .sub:empty { display: none; }
+/* The scenes heading: the title on the left, the room's Off on the right (a power glyph and the word). */
+.sec-head { display: flex; align-items: center; justify-content: space-between; gap: calc(6 * var(--mm)); margin-bottom: calc(2 * var(--mm)); }
+.sec-head h2.micro { margin: 0; }
+.scenes-off { display: flex; margin-left: auto; min-height: calc(16 * var(--mm)); }
+.scenes-off:empty { display: none; }
+.scenes-off > button { flex-direction: row; gap: calc(2.5 * var(--mm)); min-width: calc(34 * var(--mm)); padding: 0 calc(3 * var(--mm)); }
+.scenes-off .label { font-size: calc(10 * var(--tmm)); font-weight: 700; }
+.scenes-off .sub:empty { display: none; }
+.scenes-off svg { width: calc(11 * var(--tmm)); height: calc(11 * var(--tmm)); }
+/* Thermostat: − and + either side of the room pages' arc gauge, the target written under it, then Heat / Off. */
+.thermo { display: grid; grid-template-columns: auto minmax(0, calc(175 * var(--mm))) auto; justify-content: center; align-items: center; column-gap: calc(12 * var(--mm)); }
+.thermo .step { width: calc(26 * var(--tmm)); height: calc(26 * var(--tmm)); font-size: calc(22 * var(--tmm)); font-weight: 700; line-height: 1; }
+.thermo .gl { display: none; } /* the mode is the Heat / Off pair; the target is the line below */
+.dial .gv { font-size: calc(32 * var(--tmm)); }
+.target-line { margin: calc(1 * var(--mm)) 0 0; text-align: center; font-size: calc(13 * var(--tmm)); color: var(--fg2); }
+.target-line b { color: var(--fg); }
+.target-line .sub:not(:empty)::before { content: " · "; }
+.modes { margin-top: calc(6 * var(--mm)); }
+/* Now Playing: the equaliser glyph, the player's name over a larger title, play/pause. */
+.media { display: grid; grid-template-columns: calc(14 * var(--tmm)) minmax(0, 1fr) calc(46 * var(--mm)); align-items: center; column-gap: calc(6 * var(--mm)); }
+.media + .media { margin-top: calc(6 * var(--mm)); }
+.media .ic.eq { width: calc(14 * var(--tmm)); height: calc(14 * var(--tmm)); }
+.media .eq i { width: calc(2 * var(--mm)); }
+.media.playing .eq.loop i { animation: eq 900ms ease-in-out infinite alternate; }
+.media.playing .eq.loop i:nth-child(2) { animation-delay: -300ms; } .media.playing .eq.loop i:nth-child(3) { animation-delay: -600ms; }
+.mtext { min-width: 0; }
+.mname { margin-bottom: calc(1 * var(--mm)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.media .title { font-size: calc(13 * var(--tmm)); line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.media .small { min-height: calc(22 * var(--mm)); }
+/* House: the one summary line, a little larger than body text. */
+.facts { display: flex; flex-wrap: wrap; column-gap: calc(14 * var(--mm)); row-gap: calc(3 * var(--mm)); font-size: calc(11 * var(--tmm)); }
+.facts .ic { width: calc(11 * var(--tmm)); height: calc(11 * var(--tmm)); }
 .facts span { color: var(--fg2); }
 .facts .fact { display: inline-flex; align-items: center; gap: calc(2 * var(--mm)); }
 .facts b { color: var(--fg); }
@@ -951,7 +1007,7 @@ h2.micro { font-size: calc(9 * var(--tmm)); font-weight: 700; color: var(--fg2);
 .hl { color: var(--fg); }
 .dot { color: var(--tone, var(--fg2)); margin: 0 calc(4 * var(--mm)); }
 /* Section divider before each feed: a short vertical gradient bar. */
-.sec { display: inline-block; flex: none; width: 2px; height: 0.9em; margin: 0 calc(5 * var(--mm)) 0 calc(2 * var(--mm)); background: linear-gradient(var(--accent2), var(--accent3)); }
+.ticker .sec { display: inline-block; flex: none; width: 2px; height: 0.9em; margin: 0 calc(5 * var(--mm)) 0 calc(2 * var(--mm)); background: linear-gradient(var(--accent2), var(--accent3)); }
 .single { padding: 0 calc(20 * var(--mm)); overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 @keyframes tick { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 
@@ -1002,15 +1058,15 @@ const TEMPLATE = `
 <div class="page more detail off" role="region" aria-label="${T.homeControls}" inert>
   <div class="rails loop" aria-hidden="true">${RAIL_BARS}</div>
   <div class="panes">
-    <section class="doors-sec brk" data-stagger><h2 class="micro">${T.doors}</h2><div class="grid g2 doors"></div></section>
-    <section class="scenes-sec brk" data-stagger><h2 class="micro scenes-title"></h2><div class="grid g3 scenes"></div></section>
+    <section class="doors-sec brk" data-stagger><h2 class="micro">${T.doors}</h2><div class="inst-row doors"></div></section>
+    <section class="scenes-sec brk" data-stagger><div class="sec-head"><h2 class="micro scenes-title"></h2><div class="scenes-off"></div></div><div class="inst-row scenes"></div></section>
     <section class="thermo-sec brk" data-stagger><h2 class="micro">${T.thermostat}</h2>
       <div class="thermo">
-        <p class="now">${T.inside}<b class="cur">—</b></p>
         <button class="small step" data-action="tempDown" aria-label="${T.lowerTarget}">−</button>
-        <p class="target"><b class="tgt">—</b><span class="sub">${T.target}</span></p>
+        <div class="dial"></div>
         <button class="small step" data-action="tempUp" aria-label="${T.raiseTarget}">+</button>
       </div>
+      <p class="target-line">${T.target} <b class="tgt-v">—</b><span class="sub tgt-sub"></span></p>
       <div class="grid g2 modes">
         <button class="small" data-action="modeHeat" aria-pressed="false">${ICONS.climate}<span class="label">${T.heat}</span><span class="sub"></span></button>
         <button class="small" data-action="modeOff" aria-pressed="false">${ICONS.power}<span class="label">${T.off}</span><span class="sub"></span></button>
@@ -1103,7 +1159,7 @@ class MashrabiyaCard extends HTMLElement {
     this._el = {
       time: $(".time"), ampm: $(".ampm"), date: $(".date"), temp: $(".temp"), cond: $(".cond"), rain: $(".rain"),
       ticker: $(".ticker"), status: $(".status"), glance: $(".glance"), detail: $(".detail"),
-      doors: $(".doors"), scenes: $(".scenes"), cur: $(".cur"), tgt: $(".tgt"), tgtSub: $(".target .sub"),
+      doors: $(".doors"), scenes: $(".scenes"), scenesOff: $(".scenes-off"), dial: $(".dial"), tgtV: $(".tgt-v"), tgtSub: $(".tgt-sub"),
       mediaSec: $(".media-sec"), mediaList: $(".media-list"), facts: $(".facts"), wx: $(".wx"),
       pager: $(".pager"), ptrack: $(".ptrack"),
       fx: $(".touch-fx"), roomsBtn: $(".rooms-btn"), fps: $(".fps"), controls: $(".controls"), font: $("style.font"),
@@ -1611,6 +1667,7 @@ class MashrabiyaCard extends HTMLElement {
     const leaving = this._btn("leaving"), lockAll = this._btn("lockAll");
     leaving.hidden = !c.leaving_script;
     lockAll.hidden = !c.locks.length;
+    this._btn("more").hidden = !c.more_button; // hidden: out of the layout, the focus order and the a11y tree
     const shown = Array.from(el.controls.children).filter((b) => !b.hidden).length;
     el.controls.style.gridTemplateColumns = `repeat(${Math.max(1, shown)}, 1fr)`;
     el.doorsSec.hidden = !c.locks.length;
@@ -1813,7 +1870,7 @@ class MashrabiyaCard extends HTMLElement {
     this._el.cond.dataset.tone = L.conditionTone(this._state(c.weather));
     this._renderWeatherIcon(this._state(c.weather));
 
-    const lines = L.statusLines(L.exceptions(s, c, this._scents), !!this._lost);
+    const lines = L.statusLines(L.exceptions(s, c, this._scents), !!this._lost, c.more_button);
     if (this._changed("status", JSON.stringify(lines))) this._renderStatus(lines);
 
     const anyLock = c.locks.some((id) => s[id]);
@@ -1988,10 +2045,47 @@ class MashrabiyaCard extends HTMLElement {
     });
   }
 
+  // The thermostat on More is the room pages' arc gauge (_gaugeNode, painted by _paintGauge): the inside
+  // temperature sweeps the arc and a tick marks the target. − and + sit either side and the target is
+  // written under it; a tap shows the pending target at once (tick and words) until HA confirms it or
+  // 8 s pass. Built once per unit (its scale and colours depend on it), then only painted.
+  _renderThermo() {
+    const c = this._config;
+    if (!c.climate) return;
+    const cl = this._states()[c.climate];
+    const a = (cl && cl.attributes) || {};
+    if (this._pendingTarget !== undefined && (a.temperature === this._pendingTarget || Date.now() - this._pendingAt > 8000)) {
+      this._pendingTarget = undefined;
+    }
+    const target = this._pendingTarget !== undefined ? this._pendingTarget : a.temperature;
+    const mode = cl ? cl.state : undefined;
+    const unit = c.temperature_unit;
+    const reading = (v) => (v === null || v === undefined || v === "" || !Number.isFinite(Number(v)) ? null : Number(v));
+    const it = {
+      key: "thermostat", kind: "climate", icon: "climate", label: T.modes[mode] || (mode ? L.formatId(mode) : ""),
+      tone: L.tempTone(a.current_temperature, unit), modeTone: L.modeTone(mode),
+      gauge: Object.assign({ value: reading(a.current_temperature), unit }, L.tempScale(unit), { target: reading(target) }),
+    };
+    let g = this._thermoGauge;
+    if (!g || g._unit !== unit) {
+      g = this._gaugeNode(it);
+      g._unit = unit;
+      this._paintGauge(g, it, false); // painted before it is attached: no transition from nothing
+      this._el.dial.replaceChildren(g);
+      this._thermoGauge = g;
+    } else this._paintGauge(g, it, true);
+    setText(this._el.tgtV, L.tempText(target));
+    this._el.tgtV.dataset.tone = L.modeTone(mode);
+    const heat = this._btn("modeHeat"), off = this._btn("modeOff");
+    heat.setAttribute("aria-pressed", String(mode === "heat"));
+    heat.dataset.tone = "orange";
+    off.setAttribute("aria-pressed", String(mode === "off"));
+  }
+
   _renderDetail() {
     const s = this._states(), c = this._config;
     for (const b of this._el.doors.children) {
-      setText(b.querySelector(".label"), L.entityName(s, b.dataset.lock).replace(/\s+lock$/i, ""));
+      setText(b.querySelector(".label"), L.doorLabel(L.entityName(s, b.dataset.lock)));
       const word = L.doorWord(this._state(b.dataset.lock), this._state(b.dataset.door));
       const lv = L.lockVisual(this._state(b.dataset.lock), this._state(b.dataset.door));
       this._paintPadlock(b.querySelector(".lk"), this._state(b.dataset.lock), lv.doorOpen, this._canAnimateEl(b), this._alertDoors && this._alertDoors.has(b.dataset.door));
@@ -2002,18 +2096,7 @@ class MashrabiyaCard extends HTMLElement {
       sub.classList.toggle("att", word === T.open || word === T.offline);
     }
 
-    const cl = s[c.climate];
-    const a = (cl && cl.attributes) || {};
-    setText(this._el.cur, L.tempText(a.current_temperature));
-    if (this._pendingTarget !== undefined && (a.temperature === this._pendingTarget || Date.now() - this._pendingAt > 8000)) {
-      this._pendingTarget = undefined;
-    }
-    setText(this._el.tgt, L.tempText(this._pendingTarget !== undefined ? this._pendingTarget : a.temperature));
-    const mode = cl ? cl.state : undefined;
-    this._el.tgtSub.dataset.tone = L.modeTone(mode);
-    this.shadowRoot.querySelector('[data-action="modeHeat"]').setAttribute("aria-pressed", String(mode === "heat"));
-    this.shadowRoot.querySelector('[data-action="modeHeat"]').dataset.tone = "orange";
-    this.shadowRoot.querySelector('[data-action="modeOff"]').setAttribute("aria-pressed", String(mode === "off"));
+    this._renderThermo();
 
     const playing = L.mediaPlayers(c, s);
     const mkey = JSON.stringify(playing.map((m) => [m.entity, this._state(m.entity), (s[m.entity].attributes || {}).media_title]));
@@ -2483,7 +2566,7 @@ class MashrabiyaCard extends HTMLElement {
       ic = document.createElement("span");
       ic.className = "ic eq loop";
       ic.setAttribute("aria-hidden", "true");
-      ic.innerHTML = "<i></i><i></i><i></i>";
+      ic.innerHTML = EQ_BARS;
     } else ic = this._iconNode(it.icon);
     const label = this._labelNode(it);
     const v = document.createElement("b");
@@ -2812,6 +2895,8 @@ class MashrabiyaCard extends HTMLElement {
   }
   // === END RADAR PAGE ===
 
+  // Now Playing: per player the equaliser glyph (moving while it plays: a loop, so never at night, off
+  // screen or under reduced motion), its name as a micro-label over a larger title, and play/pause.
   _renderMedia(playing) {
     const list = this._el.mediaList;
     list.textContent = "";
@@ -2819,52 +2904,92 @@ class MashrabiyaCard extends HTMLElement {
     for (const m of playing) {
       const st = this._states()[m.entity];
       const a = st.attributes || {};
+      const on = st.state === "playing";
       const row = document.createElement("div");
       row.className = "media";
+      row.classList.toggle("playing", on);
+      const eq = document.createElement("span");
+      eq.className = "ic eq loop";
+      eq.setAttribute("aria-hidden", "true");
+      eq.dataset.tone = on ? "purple" : "dim";
+      eq.innerHTML = EQ_BARS;
+      const text = document.createElement("div");
+      text.className = "mtext";
+      const name = document.createElement("p");
+      name.className = "micro mname";
+      name.textContent = m.name;
       const title = document.createElement("p");
       title.className = "title";
-      title.textContent = `${m.name}: ${a.media_title || a.app_name || T.playing}`;
+      title.textContent = a.media_title || a.app_name || T.playing;
+      text.append(name, title);
       const btn = document.createElement("button");
       btn.className = "small";
       btn.dataset.action = "playPause";
       btn.dataset.entity = m.entity;
-      btn.innerHTML = `${st.state === "playing" ? ICONS.pause : ICONS.play}<span class="label">${st.state === "playing" ? T.pause : T.play}</span><span class="sub"></span>`;
+      btn.setAttribute("aria-label", `${on ? T.pause : T.play}: ${m.name}`);
+      btn.innerHTML = `${on ? ICONS.pause : ICONS.play}<span class="label">${on ? T.pause : T.play}</span><span class="sub"></span>`;
       btn.dataset.tone = "purple";
       this._bind(btn);
-      row.append(title, btn);
+      row.append(eq, text, btn);
       list.appendChild(row);
     }
   }
 
+  // More's instruments: one padlock per lock (a tap may only lock: lockOne) and one glyph per scene, each
+  // a row laid out by L.moreRows (_layoutRow); a scenes `off` sits in the heading beside the title, so
+  // it never pushes a scene onto a row of its own.
   _buildDetailButtons() {
     const c = this._config;
     const doors = this._el.doors, scenes = this._el.scenes;
     doors.textContent = "";
     c.locks.forEach((lock, i) => {
       const b = document.createElement("button");
-      b.className = "small";
+      b.className = "padlock-inst";
       b.dataset.action = "lockOne";
       b.dataset.lock = lock;
       b.dataset.door = c.doors[i] || "";
       b.innerHTML = `${LOCK_GLYPH}<span class="label"></span><span class="sub"></span>`;
-      b.querySelector(".label").textContent = L.formatId(lock);
+      b.querySelector(".label").textContent = L.doorLabel(L.formatId(lock));
       doors.appendChild(b);
       this._bind(b);
     });
+    this._layoutRow(doors, L.moreRows("doors", c.locks.length, c.text_scale));
     scenes.textContent = "";
-    const items = c.scenes.entities.map((x) => ({ ...x, action: "scene" })).concat(c.scenes.off ? [{ ...c.scenes.off, action: "roomOff" }] : []);
-    for (const it of items) {
+    this._el.scenesOff.textContent = "";
+    const item = (it, action, cls, icon) => {
       const b = document.createElement("button");
-      b.className = "small";
-      b.dataset.action = it.action;
+      b.className = cls;
+      b.dataset.action = action;
       b.dataset.entity = it.entity;
-      b.dataset.tone = "yellow";
-      b.innerHTML = `${ICONS.scene}<span class="label"></span><span class="sub"></span>`;
+      b.innerHTML = `${icon}<span class="label"></span><span class="sub"></span>`;
       b.querySelector(".label").textContent = it.name;
-      scenes.appendChild(b);
       this._bind(b);
+      return b;
+    };
+    for (const it of c.scenes.entities) {
+      const b = item(it, "scene", "scene-inst", ICONS.scene);
+      b.dataset.tone = "yellow";
+      scenes.appendChild(b);
     }
+    this._layoutRow(scenes, L.moreRows("scenes", c.scenes.entities.length, c.text_scale));
+    if (c.scenes.off) this._el.scenesOff.appendChild(item(c.scenes.off, "roomOff", "small off-btn", ICONS.power));
     this._keys = {};
+  }
+
+  // A row of instruments split into rows by L.moreRows (e.g. [3, 2]): twice as many half-columns as the
+  // widest row, every item two half-columns wide, and each row's first item placed so a shorter row sits
+  // centred under the longer one. The children stay flat (door alerts and painting walk them).
+  _layoutRow(box, split) {
+    const cols = split[0] || 1;
+    box.style.gridTemplateColumns = `repeat(${2 * cols}, minmax(0, 1fr))`;
+    const kids = Array.from(box.children);
+    let i = 0;
+    for (const k of split) {
+      kids.slice(i, i + k).forEach((b, j) => {
+        b.style.gridColumn = j === 0 ? `${1 + cols - k} / span 2` : "span 2";
+      });
+      i += k;
+    }
   }
 
   // --- buttons ------------------------------------------------------------------------------
@@ -3067,7 +3192,7 @@ class MashrabiyaCard extends HTMLElement {
     }
     this._flashes.set(b, setTimeout(() => {
       this._flashes.delete(b);
-      if (b.dataset.action.startsWith("temp")) this._paintSub(b, T.target, "");
+      if (b.dataset.action.startsWith("temp")) this._paintSub(b, "", ""); // the step's word (Set, Failed) goes
       else this._paintSub(b, b._sub || "", "");
     }, ms));
   }
@@ -3172,7 +3297,7 @@ class MashrabiyaCard extends HTMLElement {
         if (next === null) return { call: () => Promise.reject(new Error("no target")) };
         this._pendingTarget = next;
         this._pendingAt = Date.now();
-        setText(this._el.tgt, L.tempText(next));
+        this._renderThermo(); // the tick and the words move at once; HA confirms later
         return { call: call("climate", "set_temperature", { entity_id: c.climate, temperature: next }), done: T.set };
       }
       case "modeHeat":

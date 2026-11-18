@@ -84,6 +84,37 @@ If a page still does not fit, its body scrolls by a vertical drag (see *One scro
 native scroll. The cut edge fades and a small "More ▾" sits centred just above the navigation row while
 there is more below (`scrollCue`); neither takes touches. Every entry to a page starts it at the top.
 
+## The More page
+
+More holds the home controls, drawn as instruments in the room pages' language rather than a list of
+buttons. Its sections stack from the top, 15 mm apart, each sized to its content inside corner brackets
+(they used to be spread over the whole height, which left wide empty bands between them):
+
+- **Doors.** One row of large padlocks (34 mm), one per lock, with the door's name and its state word
+  under each. The name drops a trailing "Lock" and "Door", because the heading already says Doors
+  ("Front Door Lock" reads *Front*; a lock called just "Door" keeps it). A tap on a padlock may only
+  lock it (`lock.lock`), exactly as before; the padlock itself is drawn from the lock's state.
+- **Scenes.** One row of scene glyphs (24 mm) with their names. The room's *Off* sits in the heading
+  beside the title, so a sixth button never ends up alone on a second row.
+- **Rows that fit.** Up to four padlocks and five scenes go across one row at `text_scale` 1, three of
+  either above 1.25. Beyond that the row splits into the fewest rows, filled evenly, longer rows first
+  (`rowSplit`, `moreRows`: five doors are 3 + 2, seven scenes at large text 3 + 2 + 2), and a shorter
+  row is centred under the longer one, so nothing is ever orphaned on a row of its own.
+- **Thermostat.** The room pages' **arc gauge**, the same code: the inside temperature sweeps the arc
+  in the temperature scale's colours with a ring at the value, and a tick marks the target. − and +
+  sit either side (26 mm targets) and *Target 73°* is written under the dial in the mode's colour. A
+  tap moves the tick and the words at once to the pending target, until Home Assistant confirms it.
+  Heat and Off are below.
+- **Now Playing.** The media **equaliser** from the room pages (it moves while the player plays, and
+  is still when paused, at night and under reduced motion), the player's name as a micro-label over a
+  larger title (13 mm), and play/pause.
+- **House.** The one summary line (presence, air, internet), at 11 mm.
+
+On entry the instruments get the same entrance as a room page: padlocks and scene glyphs pop and draw
+in, the dial's arc and marker settle on the reading and the number rolls into place. At `text_scale`
+1 the reference house (four doors, five scenes and Off, the thermostat, two players, the House line)
+fits the glass without scrolling; larger text scrolls the body as on every detail page.
+
 ## Mashrabiya
 
 The design language: the interface is a reflection that knows things; everything is drawn in light on
@@ -162,7 +193,7 @@ apart, and the glass shifts them).
 
 **One colour per severity, everywhere.** `L.SEVERITY` maps each level to one tone and the card maps
 each tone to one token: `ok` to `--ok`, `attention` to `--attention`, `alert` to `--alert` (plus
-`--alert-text` for words). The status line, the padlocks, Lock all, More's door buttons and the room
+`--alert-text` for words). The status line, the padlocks, Lock all, More's padlocks and the room
 chips all use it, so an unlocked door is the same red on the status line, on its padlock and on More,
 and an offline lock is the same orange in all three.
 
@@ -253,7 +284,9 @@ glance.
 ## Touch rules
 
 - **Target size.** Main's buttons are large and spaced 10 mm apart, with nothing within 25 mm of the
-  side edges (an IR frame's border registers sleeves). On detail pages, targets are at least 15 mm
+  side edges (an IR frame's border registers sleeves). The option `more_button: false` removes Main's
+  fourth button (More); the rest then share the row evenly (the grid is sized from the visible buttons),
+  so each is wider, never smaller, and the status overflow stops saying "tap More". On detail pages, targets are at least 15 mm
   tall, gaps at least 8 mm and text at least 9 mm (the derived Apple HIG minimum at a 1.5 m glance is 8.6 mm; a
   test scans the stylesheet for anything smaller, with two justified exceptions).
 - **Swipe versus tap.** A swipe is at least 40 mm of horizontal travel, at least twice the vertical

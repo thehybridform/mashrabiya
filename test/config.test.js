@@ -167,3 +167,37 @@ test("radar discovery pattern is configurable; the default suits Everything-Pres
   assert.equal(m.targets[0].n, 2);
   assert.equal(m.targets[0].x, 500);
 });
+
+// --- more_button: the fourth Main control, off on a mirror that is swiped -------------------------
+test("more_button: on by default, off when set false ", () => {
+  assert.equal(L.resolveConfig(undefined, undefined).more_button, true);
+  assert.equal(L.resolveConfig({}, hass()).more_button, true);
+  assert.equal(L.resolveConfig({ more_button: true }, hass()).more_button, true);
+  assert.equal(L.resolveConfig({ more_button: false }, hass()).more_button, false);
+});
+
+test("more_button false: Main's More button is hidden, so it leaves the layout, focus order and a11y tree", () => {
+  const card = fs.readFileSync(path.join(__dirname, "..", "dist", "mashrabiya-card.js"), "utf8");
+  assert.match(card, /this\._btn\("more"\)\.hidden = !c\.more_button/);
+  // The controls grid is sized from the visible buttons, so the rest spread evenly with no gap.
+  assert.match(card, /filter\(\(b\) => !b\.hidden\)\.length/);
+});
+
+test("more_button false: the status overflow no longer says to tap a button that is not there", () => {
+  const lines = [1, 2, 3, 4].map((i) => ({ level: "attention", text: `l${i}` }));
+  assert.equal(L.statusLines(lines, false).pop().text, "2 more: tap More");
+  assert.equal(L.statusLines(lines, false, false).pop().text, "2 more");
+  const card = fs.readFileSync(path.join(__dirname, "..", "dist", "mashrabiya-card.js"), "utf8");
+  assert.match(card, /L\.statusLines\(L\.exceptions\(s, c, this\._scents\), !!this\._lost, c\.more_button\)/);
+});
+
+test("more_button false: exceptions folds its overflow without pointing at More", () => {
+  const s = { "lock.x": st("unavailable"), "binary_sensor.d": st("on"), "binary_sensor.wan": st("off"), "sensor.aq": st("low") };
+  const base = { locks: ["lock.x", "lock.y"], doors: ["binary_sensor.d", "binary_sensor.e"], internet: "binary_sensor.wan", air: "sensor.aq" };
+  const on = L.exceptions(s, L.resolveConfig(base, hass(s)), []);
+  const off = L.exceptions(s, L.resolveConfig({ ...base, more_button: false }, hass(s)), []);
+  assert.equal(on.length, 3);
+  assert.match(on[2].text, /tap More$/);
+  assert.equal(off.length, 3);
+  assert.match(off[2].text, /^\d+ more$/);
+});

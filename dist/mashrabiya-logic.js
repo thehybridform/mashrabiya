@@ -12,7 +12,7 @@
     am: "AM", pm: "PM",
     // Main page
     leaving: "Leaving", lockAll: "Lock all", lightsOff: "Lights off", more: "More", outside: "Outside", headlines: "Headlines",
-    allClear: "All clear", overflow: (n) => `${n} more: tap More`, connectionLost: "Connection lost",
+    allClear: "All clear", overflow: (n, moreButton) => (moreButton === false ? `${n} more` : `${n} more: tap More`), connectionLost: "Connection lost",
     internetDown: "Internet down", airPoor: "Indoor air poor",
     doorsUnlocked: (g) => `${g} unlocked`, doorsOpen: (g) => `${g} open`,
     locksJammed: (names, n) => `${names} ${n > 1 ? "locks" : "lock"} jammed`,
@@ -133,14 +133,14 @@
     // Discovered diffusers (scentModel) with a vial running low: one line for all of them.
     const lowScent = (Array.isArray(scents) ? scents : []).filter((m) => m && m.anyLow).map((m) => m.name);
     if (lowScent.length) lines.push({ level: "attention", text: S.scentLow(lowScent.length < 3 ? joinNames(lowScent) : S.diffusersN(lowScent.length)) });
-    return foldLines(lines);
+    return foldLines(lines, c.more_button);
   }
 
-  function foldLines(lines) {
+  function foldLines(lines, moreButton) {
     if (lines.length <= MAX_LINES) return lines;
     const rest = lines.slice(MAX_LINES - 1);
     const level = ["security", "alert"].find((k) => rest.some((l) => l.level === k)) || "attention";
-    return lines.slice(0, MAX_LINES - 1).concat([{ level, text: S.overflow(rest.length) }]);
+    return lines.slice(0, MAX_LINES - 1).concat([{ level, text: S.overflow(rest.length, moreButton) }]);
   }
 
   // --- stale data (Apple HIG: keep people informed; never show a reassuring state that may be untrue) ----
@@ -156,10 +156,10 @@
 
   // What the status line shows: the exceptions, led by "Connection lost" when it is; "All clear" only when
   // there is nothing to say AND the data is live. At most MAX_LINES, folded as exceptions() folds.
-  function statusLines(ex, lost) {
+  function statusLines(ex, lost, moreButton) {
     const lines = Array.isArray(ex) ? ex.slice() : [];
-    if (lost) return foldLines([{ level: "attention", text: S.connectionLost, conn: true }].concat(lines));
-    return lines.length ? foldLines(lines) : [{ level: "calm", text: S.allClear }];
+    if (lost) return foldLines([{ level: "attention", text: S.connectionLost, conn: true }].concat(lines), moreButton);
+    return lines.length ? foldLines(lines, moreButton) : [{ level: "calm", text: S.allClear }];
   }
 
   // --- time -----------------------------------------------------------------------------------
@@ -1145,6 +1145,9 @@
       text_scale: textScale(u.text_scale),
       mirror_mode: u.mirror_mode !== false,
       mirror_timeout: finite(u.mirror_timeout) && u.mirror_timeout > 0 ? u.mirror_timeout : 180,
+      // The fourth Main control (jumps to page 2). false: Main shows the others, spread evenly; page 2 stays
+      // reachable by swiping, the pager and the detail pages' navigation.
+      more_button: u.more_button !== false,
       radar: u.radar !== false,
       radar_pattern: stringOr(u.radar_pattern, RADAR_PATTERN),
       door_alert: u.door_alert !== false,
@@ -1679,6 +1682,37 @@
     return { cols, rows, width: Math.max(RADAR.minScopeMm, Math.min(width, Math.max(colW, RADAR.minScopeMm))) };
   }
 
+  // THE MORE PAGE (docs/DESIGN.md "The More page"): doors and scenes are one row of instruments.
+  // rowSplit: up to `max` in one row; beyond that the fewest rows, filled evenly, longer rows first (5 of
+  // max 4 is [3, 2], 6 of max 5 is [3, 3], 7 of max 3 is [3, 2, 2]), so nothing sits alone on a row of
+  // its own. rowColumns: the widest row, which sets the column width. Junk is one row of one.
+  function rowSplit(count, max) {
+    if (!Number.isInteger(count) || count < 1 || !Number.isInteger(max) || max < 1) return [1];
+    const rows = Math.ceil(count / max), base = Math.floor(count / rows), extra = count % rows;
+    return Array.from({ length: rows }, (_, i) => base + (i < extra ? 1 : 0));
+  }
+  const rowColumns = (count, max) => rowSplit(count, max)[0];
+
+  // How many across on More: four padlocks and five scenes fit one row at text_scale 1 (the house has
+  // 4 doors and 5 scenes); over TWO_COLUMN_MAX_SCALE the names need more room, so three (never two: an odd count would orphan).
+  const MORE_ROW_MAX = { doors: [4, 3], scenes: [5, 3] };
+  function moreRows(kind, count, textScale) {
+    const m = MORE_ROW_MAX[kind] || [1, 1];
+    return rowSplit(count, finite(textScale) && textScale > TWO_COLUMN_MAX_SCALE ? m[1] : m[0]);
+  }
+  const moreColumns = (kind, count, textScale) => moreRows(kind, count, textScale)[0];
+
+  // A padlock's name under it, in a section headed Doors: "Front Door Lock" says "Front". A trailing
+  // "Lock" and then "Door" go, but never the whole name ("Door Lock" stays "Door").
+  function doorLabel(name) {
+    let n = String(name === undefined || name === null ? "" : name).trim();
+    for (const word of [/\s+lock$/i, /\s+door$/i]) {
+      const cut = n.replace(word, "").trim();
+      if (cut) n = cut;
+    }
+    return n;
+  }
+
   // Doors pair with locks by position (config `locks[i]` with `doors[i]`).
   function doorPairs(cfg) {
     const out = {};
@@ -1700,7 +1734,7 @@
     radarWedgePath, radarRingArc, radarRings, radarZoneRect, radarTrailPush,
     TOUCH, trailPush, trailFrame, burstAngle,
     CONNECTION, connectionDown, connectionLost, statusLines,
-    privacyActive, navTargets, gridColumns, TWO_COLUMN_MAX_SCALE, MEDIA_MAX, mediaVisible, roomChips, scrollCue, scopeSize, roomKey, pageKeys, orderPages,
+    privacyActive, navTargets, gridColumns, rowSplit, rowColumns, moreRows, moreColumns, doorLabel, TWO_COLUMN_MAX_SCALE, MEDIA_MAX, mediaVisible, roomChips, scrollCue, scopeSize, roomKey, pageKeys, orderPages,
 
 
  pageIndexFor, firstRoomIndex,

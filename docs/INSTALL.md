@@ -152,12 +152,12 @@ when this table and the code disagree, the code wins (and that is a bug to fix h
 | `internet` | entity id (`binary_sensor.*`) | None: hidden | A connectivity check; `off` raises "Internet down" |
 | `air` | entity id (`sensor.*`) | None: hidden | An enum air-quality sensor whose state is `highest`, `high`, `medium`, `low` or `lowest`; `low` and `lowest` raise "Indoor air poor" |
 | `leaving_script` | entity id (`script.*`) | None: the Leaving button is hidden | Run (`script.turn_on`) by the Leaving button. Make sure it cannot unlock anything |
-| `climate` | entity id (`climate.*`) | None: the Thermostat section is hidden | Thermostat shown on More: target up and down by one, Heat and Off |
+| `climate` | entity id (`climate.*`) | None: the Thermostat section is hidden | Thermostat shown on More as an arc gauge (inside temperature, a tick at the target): target up and down by one with − and +, Heat and Off |
 | `person` | entity id (`person.*`) | None: hidden | Shown on More as "Someone home" or "Away", never by name ("Home" is the way back to the first page) |
 | `privacy` | `auto`, `off` (or `false`) or `always` (or `true`) | `auto` | Guest privacy. While it is active the Radar page leaves the swipe loop (the card goes to Main if it was on it), room pages show their rooms without occupancy, and More shows no presence word. `auto`: active while `person` is not home (a missing or unknown person counts as not home), or, with no `person` set, while no `person.*` entity is home; with no person entities at all it stays off. `always`: always active. `off`: never. Names are never shown either way |
 | `scenes.title` | string | `""` | Heading of the scenes section on More; the section is hidden when it has no scenes and no `off` |
-| `scenes.entities` | list of `scene.*` ids or `{entity, name}` | `[]` | One button each (`scene.turn_on`); a bare id takes its friendly name |
-| `scenes.off` | entity id or `{entity, name}` | None | Adds an "Off" button that turns this light or light group off |
+| `scenes.entities` | list of `scene.*` ids or `{entity, name}` | `[]` | One glyph each in one row on More (`scene.turn_on`; five fit across, more wrap evenly); a bare id takes its friendly name |
+| `scenes.off` | entity id or `{entity, name}` | None | Adds an "Off" button, in the scenes heading beside the title, that turns this light or light group off |
 | `media_players` | list of `media_player.*` ids or `{entity, name}`, or omitted | Omitted: every player that is playing or paused | Players listed under Now playing, with a Play/Pause button, while playing or paused |
 | `news` | list of `{label, entity, tone}` | `[]`: the ticker is hidden | Headline sources, shown in this order. `tone` is `green`, `blue`, `yellow`, `orange` or `purple`, default cycling in that order. See [News feeds](#news-feeds) |
 | `rooms` | list of area ids, or null | null: every area that has something to show, by name | Which areas get a room page, and in what order |
@@ -167,6 +167,7 @@ when this table and the code disagree, the code wins (and that is a bug to fix h
 | `text_scale` | number, `0.8` to `2` | `1` | Multiplies every text size, and the icons that sit beside text, without moving the layout bands. Main's status line and controls grow upward from their row, and More, room and radar pages scroll between their fixed header and the navigation row when the text no longer fits (above `1.25`, room rows and diffusers also stay one column, so names are not cut). At `1` no text is smaller than 9 mm; below `1` it can be |
 | `radar` | boolean | `true` | `false` hides the Radar page. Radars are discovered, see [Radar](#radar) |
 | `radar_pattern` | string containing `{prefix}` | `{prefix}_presence` | The entity-id stem the radar sensors share, with `{prefix}` standing for the device name |
+| `more_button` | boolean | `true` | Main's fourth button, More, jumps to page 2. `false` removes it: Main shows its other buttons spread evenly across the full width (same size and spacing), and the status overflow reads "N more" instead of "N more: tap More". Page 2 stays reachable by swiping, the page indicator and the detail pages' navigation row. Leaving and Lock all are shown only when configured, so with `false` and neither, Lights off stands alone |
 | `door_alert` | boolean | `true` | An open door from `doors` is the alert: its status line, room-page stat and More button turn red, and their marks (the ring, the icon, the door glyph) breathe while the words stay steady. `false` makes it attention (orange) with no breathing |
 | `scent` | boolean | `true` | `false` hides fragrance diffusers on the room pages and their "scent low" status line. Diffusers are discovered, see [Fragrance diffusers](#fragrance-diffusers) |
 | `night_start` | string `HH:MM` | `22:00` | Start of the night window (may wrap midnight) |
@@ -294,14 +295,14 @@ device's name. It is read-only: the card never changes the intensity, the slot o
 
 - **Open-door alert.** While any door in `doors` reports `on`, the "… open" status line on Main turns red and
   breathes (2.4 s; the text never drops below about half brightness, its ring goes lower), and the door's
-  stat on its room page and its button on More breathe in step. There is no screen border. It also runs
+  stat on its room page and its padlock on More breathe in step. There is no screen border. It also runs
   at night, still red but dimmer, and is steady under reduced motion. It stops within 0.4 s once the door is shut; doors that
   are unavailable or unknown never trigger it. `door_alert: false` turns it off.
 - **Padlocks.** Every lock is drawn as a padlock that follows its real state: sealed and green when
   locked, the shackle lifted and swung open in orange when unlocked, red when jammed, half open with a
   turning ring while locking or unlocking, dim with a slash when unavailable. Real changes animate,
   whoever made them. The paired door (`doors[i]` with `locks[i]`) is drawn beside it when open. They
-  appear on Lock all (a summary of every lock), on More's door buttons and on the room page of the area
+  appear on Lock all (a summary of every lock), on More's row of padlocks (one per lock, a tap only locks) and on the room page of the area
   that holds the lock. This is a picture of the state only: the card still cannot unlock anything.
 
 ## Updating the card
