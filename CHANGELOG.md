@@ -4,7 +4,7 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.2.0] - 2026-11-17
 
 ### Added
 
@@ -76,5 +76,6 @@ First public release.
 - Lock-only by construction: the card can lock and can never unlock or open; a test fails if an unlock
   or open call is added.
 
+[0.2.0]: https://github.com/thehybridform/mashrabiya/releases/tag/v0.2.0
 [0.1.1]: https://github.com/thehybridform/mashrabiya/releases/tag/v0.1.1
 [0.1.0]: https://github.com/thehybridform/mashrabiya/releases/tag/v0.1.0
