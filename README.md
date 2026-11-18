@@ -13,7 +13,7 @@ dashboard, is sized in physical millimetres so text is legible at arm's length a
 doorway, and draws everything in light on black, because on a two-way mirror black *is* the mirror and
 anything filled glows through the glass as a rectangle.
 
-> Status: 0.2.1, early release. The card is tested and generic, and runs on one real mirror; see
+> Status: 0.3.0, early release. The card is tested and generic, and runs on one real mirror; see
 > [RELEASE-CHECKLIST.md](RELEASE-CHECKLIST.md) for what is still unverified (clean installs, minimum
 > Home Assistant version).
 
@@ -72,9 +72,10 @@ anything filled glows through the glass as a rectangle.
   (it comes in from the right), right for the previous one. The page follows your finger and lets go
   at a quarter of the way across, or springs back; swipes never press buttons. `transition: fade`
   swaps the slide for a crossfade, which a drag also drives.
-- **Mirror mode.** Double-tap bare glass (not a button) and the screen fades to pure black over 400 ms,
-  leaving only the mirror. It fades back after `mirror_timeout` (default 3 minutes), on another double tap,
-  or at once if a door is opened. Single taps do nothing meanwhile; `mirror_mode: false` turns it off.
+- **Mirror mode.** Double-tap bare glass (not a button), or swipe with three fingers in any direction,
+  and the screen fades to pure black over 400 ms, leaving only the mirror. It fades back after
+  `mirror_timeout` (default 3 minutes), on another double tap or three-finger swipe, or at once if a door
+  is opened. Single taps do nothing meanwhile; `mirror_mode: false` turns it off.
 - **Night mode.** In your night window the display shows only the clock and exceptions, in dim amber;
   a tap wakes the controls for 30 seconds.
 - **Reduced motion.** Honours `prefers-reduced-motion`: no animation at all, crossfades instead of

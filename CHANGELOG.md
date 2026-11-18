@@ -4,6 +4,16 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.3.0] - 2026-11-18
+
+### Added
+
+- Any three-finger swipe toggles mirror mode: the fingers moving together 25 mm or more in any
+  direction, or gathering toward / spreading from their centre. Decided when the first finger lifts;
+  two fingers do nothing, a stale IR ghost never counts as a finger, and multi-touch never taps or
+  changes page. Off with `mirror_mode: false`, like the double tap. See "Three-finger toggle" in
+  `docs/DESIGN.md`.
+
 ## [0.2.1] - 2026-11-17
 
 ### Fixed
@@ -86,6 +96,7 @@ First public release.
 - Lock-only by construction: the card can lock and can never unlock or open; a test fails if an unlock
   or open call is added.
 
+[0.3.0]: https://github.com/thehybridform/mashrabiya/releases/tag/v0.3.0
 [0.2.1]: https://github.com/thehybridform/mashrabiya/releases/tag/v0.2.1
 [0.2.0]: https://github.com/thehybridform/mashrabiya/releases/tag/v0.2.0
 [0.1.1]: https://github.com/thehybridform/mashrabiya/releases/tag/v0.1.1
