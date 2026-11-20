@@ -4,6 +4,17 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.4.0] - 2026-11-19
+
+### Added
+
+- `sleep_timeout` (seconds, default off): after that long with no touch, the screen goes dark like mirror
+  mode, but stays dark until woken.
+- `wake_entities` (an entity id or a list): motion or presence sensors. One turning on wakes a sleeping
+  screen, and while one is on the screen never sleeps. A three-finger swipe, a double tap or a new door
+  alert also wake it. Motion never ends mirror mode someone turned on by hand. See "Sleep" in
+  `docs/DESIGN.md`.
+
 ## [0.3.0] - 2026-11-18
 
 ### Added
@@ -96,6 +107,7 @@ First public release.
 - Lock-only by construction: the card can lock and can never unlock or open; a test fails if an unlock
   or open call is added.
 
+[0.4.0]: https://github.com/thehybridform/mashrabiya/releases/tag/v0.4.0
 [0.3.0]: https://github.com/thehybridform/mashrabiya/releases/tag/v0.3.0
 [0.2.1]: https://github.com/thehybridform/mashrabiya/releases/tag/v0.2.1
 [0.2.0]: https://github.com/thehybridform/mashrabiya/releases/tag/v0.2.0
