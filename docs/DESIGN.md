@@ -325,6 +325,14 @@ glance.
   stale IR ghost never does), any other finger count is ignored (two fingers do nothing), and
   multi-touch is never a tap or a page swipe, so nothing else fires along the way. Off with
   `mirror_mode: false`.
+- **Sleep.** With `sleep_timeout` set (off by default; 300 s, five minutes, suits a hallway), the screen
+  goes dark after that long with no touch and no `wake_entities` sensor on: the mirror-mode veil, but
+  with no `mirror_timeout`, so it stays dark until woken (L.sleepDue, checked every second from the clock
+  tick). A wake entity turning on (L.wakeOn, on every hass update), a three-finger swipe (even with
+  `mirror_mode: false`), a double tap or a new door alert wakes it, fading back over 600 ms to the page
+  it was on; a wake entity that is on keeps it awake. Motion never ends mirror mode asked for by hand:
+  the person who asked is the one standing in front of it. Same limit as mirror mode: the backlight
+  stays on behind the black.
 - **Fade transition** (`transition: fade`). Pages crossfade instead of sliding, and the fade is
   asymmetric (L.fadeTiming): the outgoing page leaves 1 to 0 over 360 ms (ease-in-out, as ever); the
   incoming page comes up 0 to 1 over 700 ms on a decelerating curve (cubic-bezier(0.16, 1, 0.3, 1)),

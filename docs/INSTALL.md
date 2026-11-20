@@ -174,6 +174,8 @@ when this table and the code disagree, the code wins (and that is a bug to fix h
 | `night_end` | string `HH:MM` | `06:30` | End of the night window |
 | `mirror_mode` | boolean | `true` | A double tap (two taps within 350 ms and 10 mm) on bare glass, not on a button, blacks the screen out so the glass is a pure mirror. Any three-finger swipe (any direction, or fingers gathering or spreading) toggles it. `false` turns all of it off |
 | `mirror_timeout` | number (seconds) | `180` | How long mirror mode lasts before the screen fades back (600 ms) to the page you were on. Another double tap, a three-finger swipe, or a new open-door alert, ends it sooner |
+| `sleep_timeout` | number (seconds) | `0` (off) | After this long with no touch (and no wake entity on), the screen goes dark like mirror mode, but stays dark until woken: a wake entity turning on, a three-finger swipe, a double tap or a new open-door alert. `300` is five minutes |
+| `wake_entities` | entity id or list | none | Motion or presence sensors (`binary_sensor`): `on` wakes a sleeping screen and keeps it from sleeping. They never end mirror mode someone turned on by hand |
 | `debug_fps` | boolean | `false` | Shows a frame-rate readout, top right. `?fps=1` in the page URL does the same without editing the dashboard |
 | `font_url` | string (URL) or null | Google Fonts stylesheet for Atkinson Hyperlegible | Stylesheet that declares the face. `null` fetches nothing and uses system fonts (offline kiosks, privacy) |
 | `font_family` | string | `Atkinson Hyperlegible` | Family name the stylesheet declares; set it when you change `font_url` |
