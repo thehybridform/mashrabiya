@@ -181,6 +181,43 @@ Do not stop it with `pkill -f "chromium.*--kiosk"`: the pattern also matches the
 (its command line contains the same text), so the respawner dies with the browser and nothing comes
 back until the next login. Restarting the display manager restarts the whole session cleanly.
 
+### Backlight off while dark (optional)
+
+A black page still leaves the LCD backlight on. With the card's `display_power_url` set, every dark
+screen (sleep, a three-finger swipe, a double tap) also asks a small helper on this computer to darken
+the monitor, and waking restores it. The helper is `kiosk/display_power.py` (Python standard
+library only); it listens on 127.0.0.1 only and restores the screen when it starts, so a restart never
+leaves it dark. It has two methods (`MIRROR_DISPLAY_METHOD`):
+
+| Method | How | Trade-off |
+|---|---|---|
+| `wlopm` (default) | powers the HDMI output off with `wlopm` | works with any monitor, backlight fully off; but the signal stops, and many monitors then light up to say so ("Input signal not found") |
+| `dim` | brightness 0 over DDC/CI with `ddcutil` | the signal never stops, so no message; the backlight is at its minimum rather than off, which behind two-way glass and a black page is close to invisible. Needs a monitor with DDC/CI (`ddcutil detect` lists it) |
+
+`dim` saves the brightness it found before dimming (`~/.local/state/mirror-display-brightness`), so a
+level you set with the monitor's own buttons is the one that comes back, even after a restart. The
+reference build uses `dim`: its monitor shows "Input signal not found" with `wlopm`, and "Display going
+to sleep" with DDC's own standby command.
+
+```sh
+sudo apt install wlopm ddcutil          # ddcutil only for dim; the kiosk user must be in the i2c group
+ddcutil detect                          # dim: note the I2C bus (/dev/i2c-N) of your monitor
+install -m 755 display_power.py ~/display_power.py
+# start it with the compositor, before Chromium (it inherits WAYLAND_DISPLAY from labwc); for wlopm,
+# leave out the three MIRROR_ settings:
+sed -i '1i /usr/bin/lwrespawn /usr/bin/env MIRROR_DISPLAY_METHOD=dim MIRROR_DDC_BUS=N MIRROR_BRIGHTNESS=80 /usr/bin/python3 /home/kiosk/display_power.py &' ~/.config/labwc/autostart
+# let the dashboard's page reach a loopback address without a permission prompt nobody can answer
+# (Chromium's Local Network Access); replace the origin with your Home Assistant's:
+sudo mkdir -p /etc/chromium/policies/managed
+echo '{"LocalNetworkAccessAllowedForUrls": ["http://HA_HOST"]}' | sudo tee /etc/chromium/policies/managed/mirror.json
+sudo systemctl restart lightdm
+```
+
+Then set `display_power_url: http://127.0.0.1:8765` on the card. Check it by hand with
+`curl -X POST http://127.0.0.1:8765/off` (and `/on`) on the Pi. `MIRROR_OUTPUT` (default `HDMI-A-1`,
+see `wlr-randr`) and `MIRROR_DISPLAY_PORT` (default `8765`) change the output and the port;
+`MIRROR_BRIGHTNESS` is the level `dim` restores when it has none saved.
+
 ## 5. Portrait rotation
 
 labwc uses `kanshi` for output configuration. `~/.config/kanshi/config`:

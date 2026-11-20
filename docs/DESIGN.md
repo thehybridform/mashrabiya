@@ -316,8 +316,11 @@ glance.
   `mirror_timeout` (180 s), on another double tap, or immediately when a NEW door alert begins
   (L.mirrorAlertExit); it fades out over 600 ms (150 ms for the alert) to the page you were on, and the
   idle-return timer, held while mirrored, is re-armed. Reduced motion fades in 100 ms. Limit: a black
-  overlay still leaves the LCD backlight on, so some light leaks; a true backlight-off needs a host-side
-  helper and is out of scope.
+  overlay still leaves the LCD backlight on, so some light leaks. With `display_power_url`, a host-side
+  helper (kiosk/display_power.py: `wlopm` powers the output off, or `dim` sets brightness 0
+  over DDC/CI so the monitor shows no "no signal" message) darkens the screen once the veil has faded in (the
+  fade is still seen; L.displayPowerUrl), and restores it the moment mirror mode ends, however it ends; the card
+  also restores it whenever it connects, so a reload never leaves the glass dark.
 - **Three-finger toggle.** Any three-finger swipe toggles mirror mode (L.multiGesture, L.MULTI): the
   fingers' centre travelling 25 mm or more in any direction, or the fingers gathering toward / spreading
   from their centre (their mean distance from it to 60 % or less, or 1/0.6 or more, and by 10 mm).
@@ -331,8 +334,8 @@ glance.
   tick). A wake entity turning on (L.wakeOn, on every hass update), a three-finger swipe (even with
   `mirror_mode: false`), a double tap or a new door alert wakes it, fading back over 600 ms to the page
   it was on; a wake entity that is on keeps it awake. Motion never ends mirror mode asked for by hand:
-  the person who asked is the one standing in front of it. Same limit as mirror mode: the backlight
-  stays on behind the black.
+  the person who asked is the one standing in front of it. Like mirror mode, the backlight goes dark too when
+  `display_power_url` is set.
 - **Fade transition** (`transition: fade`). Pages crossfade instead of sliding, and the fade is
   asymmetric (L.fadeTiming): the outgoing page leaves 1 to 0 over 360 ms (ease-in-out, as ever); the
   incoming page comes up 0 to 1 over 700 ms on a decelerating curve (cubic-bezier(0.16, 1, 0.3, 1)),
