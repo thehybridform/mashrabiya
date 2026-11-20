@@ -4,6 +4,18 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.5.0] - 2026-11-19
+
+### Added
+
+- `display_power_url`: every dark screen (sleep, a three-finger swipe, a double tap) also asks a helper
+  on the kiosk computer to darken the monitor once the fade to black is done, and waking restores it at
+  once; the card also restores it whenever it connects, so a reload never leaves the glass dark.
+- `kiosk/display_power.py`, that helper (Python standard library, listens on 127.0.0.1 only). Two
+  methods: `wlopm` powers the output off (any monitor; many then show "no signal"), `dim` sets
+  brightness 0 over DDC/CI with `ddcutil` (no message; saves and restores the brightness). Setup,
+  including the Chromium policy that lets the page reach it, is in `docs/KIOSK.md`.
+
 ## [0.4.0] - 2026-11-19
 
 ### Added
@@ -107,6 +119,7 @@ First public release.
 - Lock-only by construction: the card can lock and can never unlock or open; a test fails if an unlock
   or open call is added.
 
+[0.5.0]: https://github.com/thehybridform/mashrabiya/releases/tag/v0.5.0
 [0.4.0]: https://github.com/thehybridform/mashrabiya/releases/tag/v0.4.0
 [0.3.0]: https://github.com/thehybridform/mashrabiya/releases/tag/v0.3.0
 [0.2.1]: https://github.com/thehybridform/mashrabiya/releases/tag/v0.2.1
