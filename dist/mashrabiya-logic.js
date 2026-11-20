@@ -574,6 +574,11 @@
     return (Array.isArray(ids) ? ids : []).some((id) => s[id] && s[id].state === "on");
   }
 
+  // The display-power helper's endpoint: <base>/on or <base>/off; null without a base.
+  function displayPowerUrl(base, on) {
+    return typeof base === "string" && base ? `${base}/${on ? "on" : "off"}` : null;
+  }
+
   // The veil fades in over inMs and out over outMs; under reduced motion nearly instantly.
   const MIRROR = { inMs: 400, outMs: 600, reducedMs: 100, alertOutMs: 150 };
   function mirrorFadeMs(which, reduced) {
@@ -1183,6 +1188,8 @@
       mirror_timeout: finite(u.mirror_timeout) && u.mirror_timeout > 0 ? u.mirror_timeout : 180,
       // Seconds with no touch (and no motion on a wake entity) before the screen goes dark; 0 = never.
       sleep_timeout: finite(u.sleep_timeout) && u.sleep_timeout > 0 ? u.sleep_timeout : 0,
+      // A helper on the kiosk host that powers the screen off / on (POST <url>/off, <url>/on) while asleep.
+      display_power_url: typeof u.display_power_url === "string" && u.display_power_url.replace(/\/+$/, "") ? u.display_power_url.replace(/\/+$/, "") : null,
       // Motion / presence sensors: on wakes a sleeping screen and keeps it awake. One id or a list.
       wake_entities: (typeof u.wake_entities === "string" ? [u.wake_entities] : Array.isArray(u.wake_entities) ? u.wake_entities : []).filter(
         (e) => typeof e === "string" && e,
@@ -1805,7 +1812,7 @@
 
 
  pageIndexFor, firstRoomIndex,
-    DRAG, dragNeighbour, dragDecision, dragOffsets, settleMs, DOUBLE_TAP, isDoubleTap, MULTI, multiGesture, sleepDue, wakeOn, MIRROR, mirrorFadeMs, mirrorAlertExit, fadeProgress, fadeFrames, fadeScale, fadeTiming, FADE, currentOpacity,
+    DRAG, dragNeighbour, dragDecision, dragOffsets, settleMs, DOUBLE_TAP, isDoubleTap, MULTI, multiGesture, sleepDue, wakeOn, displayPowerUrl, MIRROR, mirrorFadeMs, mirrorAlertExit, fadeProgress, fadeFrames, fadeScale, fadeTiming, FADE, currentOpacity,
     GAUGE, gaugeFraction, arcPoint, arcPath, arcDash, tempScale, tempTone, humidityTone, airSegment, fanSpinSeconds,
     newsHeadlines, tickerSegments, tickerSeconds,
     SEVERITY, severityOf, conditionTone, statusTone,

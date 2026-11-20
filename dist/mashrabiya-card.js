@@ -117,6 +117,9 @@
  *     the screen goes dark (mirror mode with no timeout). A wake entity (motion / presence sensor) turning
  *     on, a three-finger swipe, a double tap or a new door alert wakes it; a wake entity that is on keeps
  *     it awake. Motion never ends mirror mode asked for by hand.
+ *   - With display_power_url, every dark screen (sleep, three fingers, double tap) also asks a helper on the
+ *     kiosk host (kiosk/display_power.py) to darken the monitor, backlight too, once the veil has faded in;
+ *     leaving restores it.
  *   - Room pages are READ-ONLY: information, no controls but Main (test/source.test.js holds
  *     the ROOM_PAGE template and the marked render section to that). Rooms come from the HA registries
  *     on hass (areas, devices, entities): entity area, else device area; hidden and config/diagnostic
@@ -1381,8 +1384,13 @@ class MashrabiyaCard extends HTMLElement {
     // Reverse from where the veil actually is (read before cancelling): a double tap mid-fade never jumps.
     const from = L.currentOpacity(getComputedStyle(v).opacity, 0);
     if (this._veilAnim) this._veilAnim.cancel();
-    this._veilAnim = v.animate([{ opacity: from }, { opacity: 1 }], { duration: L.mirrorFadeMs("in", this._reduced()), easing: "ease-in-out" });
+    const a = (this._veilAnim = v.animate([{ opacity: from }, { opacity: 1 }], { duration: L.mirrorFadeMs("in", this._reduced()), easing: "ease-in-out" }));
     v.style.opacity = "1";
+    // The veil leaves the backlight on: once it is fully black (the fade still seen), the helper
+    // (display_power_url) powers the screen off. Not if it was woken or re-faded meanwhile.
+    a.finished.then(() => {
+      if (this._mirror && this._veilAnim === a) this._displayPower(false);
+    }, () => {});
     clearTimeout(this._mirrorTimer);
     if (!sleep) this._mirrorTimer = setTimeout(() => this._mirrorExit(false), this._config.mirror_timeout * 1000);
   }
@@ -1398,6 +1406,18 @@ class MashrabiyaCard extends HTMLElement {
     if (L.sleepDue(this._lastActive, now, this._config.sleep_timeout)) this._mirrorEnter(true);
   }
 
+  // display_power_url: ask the kiosk host's helper to power the screen on or off. Fire and forget: a
+  // missing or failing helper only means the backlight stays on behind the black veil.
+  _displayPower(on) {
+    const url = L.displayPowerUrl(this._config.display_power_url, on);
+    if (!url || typeof fetch !== "function") return;
+    try {
+      fetch(url, { method: "POST", mode: "no-cors", keepalive: true, cache: "no-store" }).catch(() => {});
+    } catch (_) {
+      // never let the screen's power break the card
+    }
+  }
+
   // On every hass update: a wake entity that is on is activity, and wakes the screen if it is asleep.
   _syncWake() {
     if (!L.wakeOn(this._states(), this._config.wake_entities)) return;
@@ -1409,6 +1429,7 @@ class MashrabiyaCard extends HTMLElement {
     if (!this._mirror) return;
     this._mirror = false;
     this._asleep = false;
+    this._displayPower(true);
     this._lastActive = Date.now();
     this._lastTap = null;
     clearTimeout(this._mirrorTimer);
@@ -1858,6 +1879,7 @@ class MashrabiyaCard extends HTMLElement {
     this._tick(true);
     this._subscribeForecast();
     this._fpsSync();
+    this._displayPower(true); // a reload or reconnect never leaves the glass dark
   }
 
   disconnectedCallback() {
