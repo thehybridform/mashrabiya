@@ -13,7 +13,7 @@ dashboard, is sized in physical millimetres so text is legible at arm's length a
 doorway, and draws everything in light on black, because on a two-way mirror black *is* the mirror and
 anything filled glows through the glass as a rectangle.
 
-> Status: 0.4.0, early release. The card is tested and generic, and runs on one real mirror; see
+> Status: 0.5.0, early release. The card is tested and generic, and runs on one real mirror; see
 > [RELEASE-CHECKLIST.md](RELEASE-CHECKLIST.md) for what is still unverified (clean installs, minimum
 > Home Assistant version).
 
@@ -79,6 +79,10 @@ anything filled glows through the glass as a rectangle.
 - **Sleep.** Optional: `sleep_timeout: 300` darkens the screen after five minutes with nobody touching
   it, and it stays dark until a motion sensor (`wake_entities`) sees someone, three fingers swipe, or a
   door opens. A sensor that sees someone keeps it awake.
+- **Backlight off while dark.** Optional: a small helper on the kiosk computer
+  ([`kiosk/display_power.py`](kiosk/display_power.py)) and `display_power_url` darken the monitor itself
+  whenever the screen goes black (powering the output off, or brightness 0 over DDC/CI so the monitor
+  shows no "no signal" message). See [docs/KIOSK.md](docs/KIOSK.md).
 - **Night mode.** In your night window the display shows only the clock and exceptions, in dim amber;
   a tap wakes the controls for 30 seconds.
 - **Reduced motion.** Honours `prefers-reduced-motion`: no animation at all, crossfades instead of
