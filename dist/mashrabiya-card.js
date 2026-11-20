@@ -113,6 +113,10 @@
  *   - Any three-finger swipe toggles the screen (mirror mode, L.multiGesture): any direction, or toward /
  *     away from the fingers' centre; decided when the first finger lifts (_multiTrack). Two fingers do
  *     nothing. Off with mirror_mode.
+ *   - Sleep (sleep_timeout, off by default): after that many seconds with no touch and no wake entity on,
+ *     the screen goes dark (mirror mode with no timeout). A wake entity (motion / presence sensor) turning
+ *     on, a three-finger swipe, a double tap or a new door alert wakes it; a wake entity that is on keeps
+ *     it awake. Motion never ends mirror mode asked for by hand.
  *   - Room pages are READ-ONLY: information, no controls but Main (test/source.test.js holds
  *     the ROOM_PAGE template and the marked render section to that). Rooms come from the HA registries
  *     on hass (areas, devices, entities): entity area, else device area; hidden and config/diagnostic
@@ -1206,6 +1210,7 @@ class MashrabiyaCard extends HTMLElement {
     // Pointers still down (id -> timeStamp of their last event), read by _primary. Registered first, so
     // every gesture handler sees the map already up to date for the event it is handling.
     this._pointers = new Map();
+    this._lastActive = Date.now(); // the last touch or motion, for sleep_timeout
     this.shadowRoot.addEventListener("pointerdown", (e) => this._trackPointer(e), true);
     this.shadowRoot.addEventListener("pointermove", (e) => this._trackPointer(e), true);
     this.shadowRoot.addEventListener("pointerup", (e) => this._trackPointer(e), true);
@@ -1280,7 +1285,8 @@ class MashrabiyaCard extends HTMLElement {
     if (e.type !== "pointerdown") return;
     xy.set(id, at);
     for (const f of [...xy.keys()]) if (!this._pointers.has(f)) xy.delete(f); // lifted where the card never saw it
-    if (!this._config.mirror_mode) {
+    if (!this._config.mirror_mode && !this._asleep) {
+      // Off with mirror_mode, except that three fingers still wake a sleeping screen (sleep_timeout).
       this._multi = null;
       return;
     }
@@ -1305,6 +1311,7 @@ class MashrabiyaCard extends HTMLElement {
 
   // The page width and the mm scale are read here, once per touch, so a drag never reads layout per move.
   _gestureDown(e) {
+    this._lastActive = Date.now(); // any touch, even a ghost-free multi-touch, holds sleep off
     const primary = this._primary(e);
     if (primary) {
       // Any other pointer still tracked is a stuck ghost: forget it, and let go of the press it held (this
@@ -1355,9 +1362,12 @@ class MashrabiyaCard extends HTMLElement {
     }
   }
 
-  _mirrorEnter() {
+  // sleep: entered by sleep_timeout (_sleepCheck), not by hand. It has no mirror_timeout (it stays dark
+  // until woken), and a wake entity turning on ends it (_syncWake); by hand, motion never does.
+  _mirrorEnter(sleep = false) {
     if (this._mirror) return;
     this._mirror = true;
+    this._asleep = sleep === true;
     this.classList.add("mirrored");
     this._navToken = (this._navToken || 0) + 1;
     clearTimeout(this._detailTimer); // no page change while mirrored; _mirrorExit re-arms it
@@ -1374,12 +1384,32 @@ class MashrabiyaCard extends HTMLElement {
     this._veilAnim = v.animate([{ opacity: from }, { opacity: 1 }], { duration: L.mirrorFadeMs("in", this._reduced()), easing: "ease-in-out" });
     v.style.opacity = "1";
     clearTimeout(this._mirrorTimer);
-    this._mirrorTimer = setTimeout(() => this._mirrorExit(false), this._config.mirror_timeout * 1000);
+    if (!sleep) this._mirrorTimer = setTimeout(() => this._mirrorExit(false), this._config.mirror_timeout * 1000);
+  }
+
+  // --- sleep (sleep_timeout, wake_entities) ------------------------------------------------------
+  // Every second (from _tick): after sleep_timeout seconds with no touch and no wake entity on, go dark.
+  _sleepCheck(now) {
+    if (this._mirror || !this._hass) return;
+    if (L.wakeOn(this._states(), this._config.wake_entities)) {
+      this._lastActive = now;
+      return;
+    }
+    if (L.sleepDue(this._lastActive, now, this._config.sleep_timeout)) this._mirrorEnter(true);
+  }
+
+  // On every hass update: a wake entity that is on is activity, and wakes the screen if it is asleep.
+  _syncWake() {
+    if (!L.wakeOn(this._states(), this._config.wake_entities)) return;
+    this._lastActive = Date.now();
+    if (this._mirror && this._asleep) this._mirrorExit(false);
   }
 
   _mirrorExit(urgent) {
     if (!this._mirror) return;
     this._mirror = false;
+    this._asleep = false;
+    this._lastActive = Date.now();
     this._lastTap = null;
     clearTimeout(this._mirrorTimer);
     this.classList.remove("mirrored");
@@ -1801,6 +1831,7 @@ class MashrabiyaCard extends HTMLElement {
     if (first) this._tick(true);
     this._subscribeForecast();
     this._render();
+    this._syncWake();
   }
 
   connectedCallback() {
@@ -1912,6 +1943,7 @@ class MashrabiyaCard extends HTMLElement {
   _tick(force) {
     if (this._hass) this._syncConnection(true); // the grace period ends between hass updates
     const now = Date.now();
+    this._sleepCheck(now);
     const c = L.clock(now, this._tz());
     if (!force && c.key === this._minuteKey) return;
     this._minuteKey = c.key;
